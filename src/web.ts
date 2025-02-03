@@ -3,6 +3,30 @@ import { WebPlugin } from '@capacitor/core';
 import type { AutoPayPlugin } from './definitions';
 
 export class AutoPayWeb extends WebPlugin implements AutoPayPlugin {
+  checkAccessibility(): Promise<any> {
+    const result = {
+      value: true
+    }
+    return new Promise((resolve, reject) => {
+      try{
+        resolve(result);
+      }catch(error){
+        reject(false);
+      }
+    });
+  }
+  enableAccessibility(): Promise<any> {
+    const result = {
+      value: true
+    }
+    return new Promise((resolve, reject) => {
+      try{
+        resolve(result);
+      }catch(error){
+        reject(false);
+      }
+    });
+  }
   stopNavigation(options: any): Promise<any> {
     return options;
   }
