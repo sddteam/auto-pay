@@ -7,6 +7,8 @@ export interface AutoPayPlugin {
   stopNavigation(options: any): Promise<any>;
   checkAccessibility(): Promise<any>;
   enableAccessibility(): Promise<any>;
+  checkOverlayPermission(): Promise<any>;
+  enableOverlayPermission(): Promise<any>;
   addListener(
     eventName: 'warning',
     listenerFunc: (data: { message: string }) => void

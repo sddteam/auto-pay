@@ -44,7 +44,7 @@ public class AutoPayScreenCaptureService extends Service {
     public void onCreate(){
         super.onCreate();
 
-        mediaProjectionHandler = new MediaProjectionHandler((MediaProjectionManager) getSystemService(MEDIA_PROJECTION_SERVICE), getApplicationContext());
+        mediaProjectionHandler = MediaProjectionHandler.getInstance(getApplicationContext());
         OverlayManager overlayManager = OverlayManager.getInstance(getApplicationContext());
 
         try{
@@ -74,13 +74,13 @@ public class AutoPayScreenCaptureService extends Service {
             // Start the service in the foreground
             startForeground(1, notification);
         }catch (Exception e){
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId){
-        if ("STOP_CAPTURE".equals(intent.getAction())) {
+        if (intent != null && "STOP_CAPTURE".equals(intent.getAction())) {
             // Stop the screen capture if the stop action was triggered
             mediaProjectionHandler.stopMediaProjection();
             stopSelf();

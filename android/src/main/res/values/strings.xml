@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="overlay_text_stop">Stop</string>
+    <string name="omnipay_business_logo">Omnipay Business Logo</string>
+    <string name="stop_auto_pay">Stop auto-pay</string>
+</resources>

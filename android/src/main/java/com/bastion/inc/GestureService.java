@@ -8,4 +8,6 @@ public interface GestureService extends AutoCloseable{
     default void click(Location location){
         click(location, 1);
     }
+
+    void ads();
 }

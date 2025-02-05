@@ -11,6 +11,7 @@ import android.media.Image;
 import android.media.ImageReader;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
+import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.DisplayMetrics;
@@ -19,6 +20,7 @@ import android.util.Log;
 import java.nio.ByteBuffer;
 
 public class MediaProjectionHandler {
+    private static MediaProjectionHandler instance;
     private final String TAG = "MediaProjectionHandler";
     private MediaProjectionManager mediaProjectionManager;
     private MediaProjection mediaProjection;
@@ -38,14 +40,21 @@ public class MediaProjectionHandler {
         this.applicationStateListener = listener;
     }
 
-    public MediaProjectionHandler(MediaProjectionManager mediaProjectionManager, Context context){
-        this.mediaProjectionManager = mediaProjectionManager;
+    public MediaProjectionHandler(Context context){
+        this.context = context.getApplicationContext();
+        this.mediaProjectionManager = (MediaProjectionManager) context.getSystemService(Context.MEDIA_PROJECTION_SERVICE);
+    }
+
+    public static synchronized MediaProjectionHandler getInstance(Context context){
+        if(instance == null){
+            instance = new MediaProjectionHandler(context);
+        }
+
+        return instance;
     }
 
     public void startMediaProjection(Context context, Intent data){
         try{
-            this.context = context;
-
             DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
             int width = displayMetrics.widthPixels;
             int height = displayMetrics.heightPixels;
@@ -114,14 +123,26 @@ public class MediaProjectionHandler {
         if(mediaProjection != null){
             mediaProjection.stop();
             mediaProjection = null;
+
+            OverlayManager.getInstance(context).removeOverlay();
+
+            Intent serviceIntent = new Intent(context, AutoPayScreenCaptureService.class);
+            context.stopService(serviceIntent);
+
+            redirectMain();
         }
 
         if(virtualDisplay != null){
             virtualDisplay.release();
             virtualDisplay = null;
         }
+    }
 
-        OverlayManager overlayManager = OverlayManager.getInstance(context);
-        overlayManager.removeOverlay();
+    private void redirectMain(){
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.setData(Uri.parse("bastion://scdmobile.app/checkout-gcash"));
+
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        context.startActivity(intent);
     }
 }

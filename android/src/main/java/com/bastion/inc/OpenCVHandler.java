@@ -58,7 +58,7 @@ public class OpenCVHandler implements ProjectionImageListener {
             Log.d(TAG, "OpenCV initialized successfully.");
         }
 
-        accessibilityGestures = new AccessibilityGestures();
+        accessibilityGestures = new AccessibilityGestures(context);
         overlayManager = OverlayManager.getInstance(context);
         preloadTemplates();
     }
@@ -79,7 +79,7 @@ public class OpenCVHandler implements ProjectionImageListener {
 
     private void preloadTemplates(){
         try{
-//            preloadedStateTemplates.put(ActionState.HOME, loadTemplate("public/assets/opencv-template/gcash/states/2 home.jpg"));
+            preloadedStateTemplates.put(ActionState.HOME, loadTemplate("public/assets/opencv-template/gcash/states/2 home.jpg"));
             preloadedStateTemplates.put(ActionState.UPLOAD_QR, loadTemplate("public/assets/opencv-template/gcash/states/3 qrscan.jpg"));
             preloadedStateTemplates.put(ActionState.PAYMENT, loadTemplate("public/assets/opencv-template/gcash/states/5 payment.jpg"));
             preloadedStateTemplates.put(ActionState.SELECT_QR, loadTemplate("public/assets/opencv-template/gcash/states/4 uploadqr.jpg"));
@@ -105,6 +105,9 @@ public class OpenCVHandler implements ProjectionImageListener {
             return;
         }
 
+        //TODO: Ads monitoring
+        accessibilityGestures.ads();
+
         isProcessing.set(true);
         previousFrameHash.set(currentFrameHash);
 
@@ -127,6 +130,10 @@ public class OpenCVHandler implements ProjectionImageListener {
                         highestMaxValue = maxVal;
                         bestState = state;
                     }
+                }
+
+                if(highestMaxValue <= 0.1){
+                    return;
                 }
 
                 if(bestState != null){

@@ -2,7 +2,9 @@ package com.bastion.inc;
 
 import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.GestureDescription;
+import android.content.Context;
 import android.graphics.Path;
+import android.graphics.Rect;
 import android.util.Log;
 import android.view.accessibility.AccessibilityNodeInfo;
 
@@ -22,6 +24,7 @@ import java.util.regex.Pattern;
 
 public class AccessibilityGestures implements GestureService {
     private final String TAG = "GESTURE";
+    private final Context context;
     private final int GESTURE_CLICK_DELAY = 1000;
     private final int GESTURE_CLICK_DURATION = 100;
     private final int GESTURE_CLICK_WAIT_TIME = 3500;
@@ -42,7 +45,9 @@ public class AccessibilityGestures implements GestureService {
         MONTH_ABBREVIATIONS.put("DEC", "DECEMBER");
     }
 
-    public AccessibilityGestures(){}
+    public AccessibilityGestures(Context context){
+        this.context = context;
+    }
     @Override
     public void click(Location location, int times) {
         if(location == null){
@@ -93,10 +98,48 @@ public class AccessibilityGestures implements GestureService {
         waitFor(GESTURE_CLICK_WAIT_TIME);
     }
 
+    @Override
+    public void ads() {
+        AccessibilityNodeInfo rootNodeInfo  = AutoPayAccessibilityService.getInstance().getRootInActiveWindow();
+        if(rootNodeInfo == null){
+            return;
+        }
+
+        findByText(rootNodeInfo, "Remind me later");
+
+        List<AccessibilityNodeInfo> allNodes = new ArrayList<>();
+        getAllNodesRecursive(rootNodeInfo, allNodes);
+
+        List<Rect> boundsList = new ArrayList<>();
+
+        for(AccessibilityNodeInfo node: allNodes){
+            Rect bounds = new Rect();
+
+            String text = node.getText() != null ? node.getText().toString() : "";
+
+            if(text.contains("Remind me later")){
+                node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+            }
+
+            /*node.getBoundsInScreen(bounds);
+
+            if(bounds.width() > 0 && bounds.height() > 0){
+                boundsList.add(bounds);
+            }*/
+        }
+
+        /*OverlayManager overlayManager = OverlayManager.getInstance(context);
+        overlayManager.drawBoundingBox(boundsList);*/
+
+    }
+
+    private void drawBoundingBox(Rect bounds){
+
+    }
+
     private void findByText(AccessibilityNodeInfo rootNodeInfo, String text){
         List<AccessibilityNodeInfo> fileNodes = rootNodeInfo.findAccessibilityNodeInfosByText(text);
         if(fileNodes == null || fileNodes.isEmpty()){
-            Log.e("Accessibility", "File with name '" + text + "' not found.");
             return;
         }
 
@@ -129,13 +172,20 @@ public class AccessibilityGestures implements GestureService {
     }
 
     private void getAllNodesRecursive(AccessibilityNodeInfo node, List<AccessibilityNodeInfo> allNodes) {
-        allNodes.add(node);
+        try{
+            if(node == null){
+                return;
+            }
+            allNodes.add(node);
 
-        int childCount = node.getChildCount();
+            int childCount = node.getChildCount();
 
-        for (int i = 0; i < childCount; i++) {
-            AccessibilityNodeInfo childNode = node.getChild(i);
-            getAllNodesRecursive(childNode, allNodes);
+            for (int i = 0; i < childCount; i++) {
+                AccessibilityNodeInfo childNode = node.getChild(i);
+                getAllNodesRecursive(childNode, allNodes);
+            }
+        } catch (RuntimeException e) {
+            throw new RuntimeException(e);
         }
     }
 

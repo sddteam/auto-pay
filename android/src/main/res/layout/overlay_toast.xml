@@ -1,12 +1,51 @@
-<TextView xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/toast_text"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:padding="16dp"
+    android:paddingVertical="8dp"
+    android:paddingHorizontal="16dp"
     android:background="@drawable/glass_background"
-    android:textColor="#000000"
-    android:textSize="11sp"
-    android:gravity="center"
-    android:drawableLeft="@drawable/red_circle"
-    android:drawablePadding="8dp"/>
+    android:gravity="center_vertical"
+    android:orientation="horizontal">
+
+    <ImageView
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:id="@+id/overlay_icon_logo"
+        android:layout_marginEnd="8dp"
+        android:contentDescription="@string/omnipay_business_logo" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/overlay_text"
+        android:textColor="#000000"
+        android:textSize="11sp"
+        android:layout_marginEnd="16dp" />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        tools:ignore="UseCompoundDrawables">
+
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:id="@+id/overlay_icon_stop"
+            android:layout_marginBottom="1dp"
+            android:contentDescription="@string/stop_auto_pay" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/overlay_text_stop"
+            android:text="@string/overlay_text_stop"
+            android:textColor="#A4A4A4"
+            android:textSize="8sp"
+            android:gravity="center"
+            tools:ignore="SmallSp" />
+    </LinearLayout>
+
+</LinearLayout>

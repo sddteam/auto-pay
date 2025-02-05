@@ -11,12 +11,15 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.media.projection.MediaProjectionManager;
+import android.net.Uri;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.accessibility.AccessibilityManager;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+
+import java.util.Objects;
 
 @CapacitorPlugin(name = "AutoPay")
 public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
@@ -45,11 +48,6 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
         super.load();
 
         bridge = getBridge();
-        openCVHandler = new OpenCVHandler(getContext());
-        openCVHandler.setApplicationStateListener(this);
-        mediaProjectionHandler = new MediaProjectionHandler(getContext().getSystemService(MediaProjectionManager.class), getContext());
-        mediaProjectionHandler.setProjectionImageListener(openCVHandler);
-        mediaProjectionHandler.setApplicationStateListener(this);
 
         screenCaptureLauncher = getActivity().registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
@@ -69,7 +67,7 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
                         try{
                             mediaProjectionHandler.startMediaProjection(getContext(), data);
                         }catch(Exception e){
-                            e.printStackTrace();
+                            throw new RuntimeException(e);
                         }
                     }
                 }else{
@@ -111,8 +109,18 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
     @PluginMethod()
     public void navigateGCash(PluginCall call){
         try {
-            if (!isAccessibilityServiceEnabled(getContext())) {
+            Context context = getContext();
+            openCVHandler = new OpenCVHandler(context);
+            openCVHandler.setApplicationStateListener(this);
+            mediaProjectionHandler = MediaProjectionHandler.getInstance(context.getApplicationContext());
+            mediaProjectionHandler.setProjectionImageListener(openCVHandler);
+            mediaProjectionHandler.setApplicationStateListener(this);
+
+            if (!isAccessibilityServiceEnabled(context)) {
                 throw new AutoPayException(AutoPayErrorCodes.ACCESSIBILITY_SERVICE_NOT_ENABLED_ERROR);
+
+            } else if (!Settings.canDrawOverlays(context)) {
+                throw new AutoPayException(AutoPayErrorCodes.OVERLAY_PERMISSION_NOT_ENABLED_ERROR);
             } else {
                 Intent serviceIntent = new Intent(getContext(), AutoPayScreenCaptureService.class);
                 getContext().startForegroundService(serviceIntent);
@@ -159,6 +167,36 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
         }
     }
 
+    @PluginMethod()
+    public void checkOverlayPermission(PluginCall call){
+        JSObject ret = new JSObject();
+
+        try{
+            ret.put("value", Settings.canDrawOverlays(getContext()));
+            call.resolve(ret);
+        }catch (Exception e){
+            call.reject(e.getLocalizedMessage(), null, e);
+        }
+    }
+
+    @PluginMethod()
+    public void enableOverlayPermission(PluginCall call){
+        JSObject ret = new JSObject();
+        Context context = getContext();
+        try{
+            if(!Settings.canDrawOverlays(context)){
+                Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        Uri.parse("package:" + context.getPackageName()));
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                context.startActivity(intent);
+            }
+
+            ret.put("value", true);
+        }catch (Exception e){
+            call.reject(e.getLocalizedMessage(), null, e);
+        }
+    }
+
     @Override
     protected void handleOnResume(){
         super.handleOnResume();
@@ -192,7 +230,6 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
         if(am != null){
             String enabledServices = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
             String serviceName = context.getPackageName() + "/" + AutoPayAccessibilityService.class.getName();
-            Log.d("AccessibilityCheck", "Service name: " + serviceName);
             return enabledServices != null && enabledServices.contains(serviceName);
         }
 
@@ -214,6 +251,8 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
     public void onError(Exception e) {
         JSObject ret = new JSObject();
         ret.put("value", e);
+
+        Log.d(TAG, Objects.requireNonNull(e.getLocalizedMessage()));
 
         notifyListeners("error", ret);
     }
