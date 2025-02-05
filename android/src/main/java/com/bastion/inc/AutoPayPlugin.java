@@ -26,11 +26,13 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
     private static final String TAG = "AutoPay";
     private Bridge bridge;
     private String ENABLE_ACCESSIBILITY_CBID;
+    private String ENABLE_OVERLAY_CIBD;
     private String NAVIGATE_GCASH_CIBD;
     private MediaProjectionManager mediaProjectionManager;
     private ActivityResultLauncher<Intent> screenCaptureLauncher;
     private MediaProjectionHandler mediaProjectionHandler;
     private OpenCVHandler openCVHandler;
+    private Intent serviceIntent;
 
     private AutoPay implementation = new AutoPay();
 
@@ -71,6 +73,10 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
                         }
                     }
                 }else{
+                    if(serviceIntent != null){
+                        getContext().stopService(serviceIntent);
+                    }
+
                     ret.put("value", false);
                     savedCall.resolve(ret);
                 }
@@ -118,11 +124,10 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
 
             if (!isAccessibilityServiceEnabled(context)) {
                 throw new AutoPayException(AutoPayErrorCodes.ACCESSIBILITY_SERVICE_NOT_ENABLED_ERROR);
-
             } else if (!Settings.canDrawOverlays(context)) {
                 throw new AutoPayException(AutoPayErrorCodes.OVERLAY_PERMISSION_NOT_ENABLED_ERROR);
             } else {
-                Intent serviceIntent = new Intent(getContext(), AutoPayScreenCaptureService.class);
+                serviceIntent = new Intent(getContext(), AutoPayScreenCaptureService.class);
                 getContext().startForegroundService(serviceIntent);
 
                 mediaProjectionManager = (MediaProjectionManager) getContext().getSystemService(Context.MEDIA_PROJECTION_SERVICE);
@@ -181,7 +186,6 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
 
     @PluginMethod()
     public void enableOverlayPermission(PluginCall call){
-        JSObject ret = new JSObject();
         Context context = getContext();
         try{
             if(!Settings.canDrawOverlays(context)){
@@ -191,7 +195,8 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
                 context.startActivity(intent);
             }
 
-            ret.put("value", true);
+            ENABLE_OVERLAY_CIBD = call.getCallbackId();
+            bridge.saveCall(call);
         }catch (Exception e){
             call.reject(e.getLocalizedMessage(), null, e);
         }
@@ -202,17 +207,30 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
         super.handleOnResume();
 
         if(bridge != null){
-            PluginCall savedCall = bridge.getSavedCall(ENABLE_ACCESSIBILITY_CBID);
+            PluginCall accessibilityCall = bridge.getSavedCall(ENABLE_ACCESSIBILITY_CBID);
+            PluginCall overlayCall = bridge.getSavedCall(ENABLE_OVERLAY_CIBD);
 
-            if(savedCall != null){
+            if(accessibilityCall != null){
                 try{
                     JSObject ret = new JSObject();
                     ret.put("value", isAccessibilityServiceEnabled(getContext()));
-                    savedCall.resolve(ret);
+                    accessibilityCall.resolve(ret);
                 }catch (Exception e){
-                    savedCall.reject(e.getLocalizedMessage(), null, e);
+                    accessibilityCall.reject(e.getLocalizedMessage(), null, e);
                 }finally{
-                    savedCall.release(bridge);
+                    accessibilityCall.release(bridge);
+                }
+            }
+
+            if(overlayCall != null){
+                try{
+                    JSObject ret = new JSObject();
+                    ret.put("value", Settings.canDrawOverlays(getContext()));
+                    overlayCall.resolve(ret);
+                }catch (Exception e){
+                    overlayCall.reject(e.getLocalizedMessage(), null, e);
+                }finally {
+                    overlayCall.release(bridge);
                 }
             }
         }
@@ -222,7 +240,9 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
     protected  void handleOnDestroy(){
         super.handleOnDestroy();
 
-        mediaProjectionHandler.stopMediaProjection();
+        if(mediaProjectionHandler != null){
+            mediaProjectionHandler.stopMediaProjection();
+        }
     }
 
     private boolean isAccessibilityServiceEnabled(Context context){

@@ -19,6 +19,8 @@ npx cap sync
 * [`stopNavigation(...)`](#stopnavigation)
 * [`checkAccessibility()`](#checkaccessibility)
 * [`enableAccessibility()`](#enableaccessibility)
+* [`checkOverlayPermission()`](#checkoverlaypermission)
+* [`enableOverlayPermission()`](#enableoverlaypermission)
 * [`addListener('warning', ...)`](#addlistenerwarning-)
 * [`addListener('error', ...)`](#addlistenererror-)
 * [`removeAllListeners()`](#removealllisteners)
@@ -104,6 +106,28 @@ checkAccessibility() => Promise<any>
 
 ```typescript
 enableAccessibility() => Promise<any>
+```
+
+**Returns:** <code>Promise&lt;any&gt;</code>
+
+--------------------
+
+
+### checkOverlayPermission()
+
+```typescript
+checkOverlayPermission() => Promise<any>
+```
+
+**Returns:** <code>Promise&lt;any&gt;</code>
+
+--------------------
+
+
+### enableOverlayPermission()
+
+```typescript
+enableOverlayPermission() => Promise<any>
 ```
 
 **Returns:** <code>Promise&lt;any&gt;</code>

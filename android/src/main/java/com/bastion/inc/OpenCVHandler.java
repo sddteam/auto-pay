@@ -43,7 +43,7 @@ public class OpenCVHandler implements ProjectionImageListener {
     private ActionState currentState = ActionState.HOME;
     private int clickCount = 0;
     private ActionState lastState = null;
-    private static final int MAX_CLICK = 3;
+    private static final int MAX_CLICK = 5;
     private OverlayManager overlayManager;
 
     public void setApplicationStateListener(ApplicationStateListener listener){
@@ -64,8 +64,7 @@ public class OpenCVHandler implements ProjectionImageListener {
     }
 
     private Mat loadTemplate(String path) throws IOException {
-        AssetManager assetManager = context.getAssets();
-        InputStream inputStream = assetManager.open(path);
+        InputStream inputStream = context.getAssets().open(path);
         Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
         if (bitmap == null) {
             throw new IOException("Failed to decode asset: " + path);
@@ -79,13 +78,13 @@ public class OpenCVHandler implements ProjectionImageListener {
 
     private void preloadTemplates(){
         try{
-            preloadedStateTemplates.put(ActionState.HOME, loadTemplate("public/assets/opencv-template/gcash/states/2 home.jpg"));
-            preloadedStateTemplates.put(ActionState.UPLOAD_QR, loadTemplate("public/assets/opencv-template/gcash/states/3 qrscan.jpg"));
-            preloadedStateTemplates.put(ActionState.PAYMENT, loadTemplate("public/assets/opencv-template/gcash/states/5 payment.jpg"));
-            preloadedStateTemplates.put(ActionState.SELECT_QR, loadTemplate("public/assets/opencv-template/gcash/states/4 uploadqr.jpg"));
-            preloadedButtonTemplates.put("qrButton", loadTemplate("public/assets/opencv-template/gcash/buttons/qrbutton.jpg"));
-            preloadedButtonTemplates.put("uploadQRButton", loadTemplate("public/assets/opencv-template/gcash/buttons/uploadqr.jpg"));
-            preloadedButtonTemplates.put("qrCodeButton", loadTemplate("public/assets/opencv-template/gcash/buttons/qrcode.jpg"));
+            //preloadedStateTemplates.put(ActionState.LOGIN, loadTemplate("opencv-template/gcash/states/1 login.jpg"));
+            preloadedStateTemplates.put(ActionState.HOME, loadTemplate("opencv-template/gcash/states/2 home.jpg"));
+            preloadedStateTemplates.put(ActionState.UPLOAD_QR, loadTemplate("opencv-template/gcash/states/3 qrscan.jpg"));
+            preloadedStateTemplates.put(ActionState.PAYMENT, loadTemplate("opencv-template/gcash/states/5 payment.jpg"));
+            preloadedStateTemplates.put(ActionState.SELECT_QR, loadTemplate("opencv-template/gcash/states/4 uploadqr.jpg"));
+            preloadedButtonTemplates.put("qrButton", loadTemplate("opencv-template/gcash/buttons/qrbutton.jpg"));
+            preloadedButtonTemplates.put("uploadQRButton", loadTemplate("opencv-template/gcash/buttons/uploadqr.jpg"));
         }catch (Exception e){
             Log.e("OPENCV", "Error preloading templates", e);
         }
@@ -105,7 +104,7 @@ public class OpenCVHandler implements ProjectionImageListener {
             return;
         }
 
-        //TODO: Ads monitoring
+        //Ads monitoring
         accessibilityGestures.ads();
 
         isProcessing.set(true);
@@ -176,7 +175,7 @@ public class OpenCVHandler implements ProjectionImageListener {
                         accessibilityGestures.find("qr_code.png");
                     }
                     if(bestState.equals(ActionState.PAYMENT)){
-                        //TODO: HANDLE THE STOP EXECUTION WITH PLUGIN METHOD FOR NAVIGATE
+                        //HANDLE THE STOP EXECUTION WITH PLUGIN METHOD FOR NAVIGATE
                         applicationStateListener.onCompleted();
                     }
                 }
@@ -208,24 +207,26 @@ public class OpenCVHandler implements ProjectionImageListener {
                 Pair<Mat, Rect> roiResult = locateTemplateInROI(screenMat, template, roiPath, false);
                 roi = roiResult.second;
 
-                Imgproc.matchTemplate(roiResult.first, template, result, Imgproc.TM_CCOEFF_NORMED);
+                Imgproc.matchTemplate(roiResult.first, template, result, Imgproc.TM_SQDIFF_NORMED);
             } else if (currentState == ActionState.SELECT_QR) {
                 int[] roiPath = {1};
                 Pair<Mat, Rect> roiResult = locateTemplateInROI(screenMat, template, roiPath, true);
                 roi = roiResult.second;
 
-                Imgproc.matchTemplate(roiResult.first, template, result, Imgproc.TM_CCOEFF_NORMED);
+                Imgproc.matchTemplate(roiResult.first, template, result, Imgproc.TM_SQDIFF_NORMED);
             }else{
-                Imgproc.matchTemplate(screenMat, template, result, Imgproc.TM_CCOEFF_NORMED);
+                Imgproc.matchTemplate(screenMat, template, result, Imgproc.TM_SQDIFF_NORMED);
             }
 
+            //Imgproc.matchTemplate(screenMat, template, result, Imgproc.TM_SQDIFF_NORMED);
+
             Core.MinMaxLocResult mmr = Core.minMaxLoc(result);
-            Point matchLoc = new Point(mmr.maxLoc.x, mmr.maxLoc.y);
+            Point matchLoc = new Point(mmr.minLoc.x, mmr.minLoc.y);
 
             matchLoc.x += roi.x;
             matchLoc.y += roi.y;
 
-            Log.d("CONFIDENCE", "Confidence: " + String.valueOf(mmr.maxVal));
+            Log.d("CONFIDENCE", "Confidence: " + String.valueOf(mmr.minVal));
 
             float scale = 1.15F;
 
@@ -323,7 +324,7 @@ public class OpenCVHandler implements ProjectionImageListener {
 
             // Convert to grayscale if the image has more than one channel (i.e., color)
             if (mat.channels() > 1) {
-                Imgproc.cvtColor(mat, mat, Imgproc.COLOR_RGB2GRAY); // or COLOR_RGBA2GRAY based on the bitmap format
+                Imgproc.cvtColor(mat, mat, Imgproc.COLOR_RGBA2GRAY); // or COLOR_RGBA2GRAY based on the bitmap format
             }
 
             return mat;
@@ -338,16 +339,15 @@ public class OpenCVHandler implements ProjectionImageListener {
             throw new IllegalArgumentException("Both images must be 2D");
         }
 
-        if (template.rows() > screenMat.rows() || template.cols() > screenMat.cols()) {
-            Size size = new Size(Math.min(screenMat.cols(), template.cols()), Math.min(screenMat.rows(), template.rows()));
+        Mat processedMat = screenMat.clone();
+
+        if (template.rows() > processedMat.rows() || template.cols() > processedMat.cols()) {
+            Size size = new Size(Math.min(processedMat.cols(), template.cols()), Math.min(processedMat.rows(), template.rows()));
             Imgproc.resize(template, template, size);
         }
 
-        Bitmap tempBit = convertMatToBitmap(template);
-        Bitmap screenBit = convertMatToBitmap(screenMat);
-
         Mat result = new Mat();
-        Imgproc.matchTemplate(screenMat, template, result, Imgproc.TM_CCOEFF_NORMED);
+        Imgproc.matchTemplate(processedMat, template, result, Imgproc.TM_CCOEFF_NORMED);
 
         return result;
     }

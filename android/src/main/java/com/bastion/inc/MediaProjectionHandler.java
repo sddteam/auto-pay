@@ -124,8 +124,6 @@ public class MediaProjectionHandler {
             mediaProjection.stop();
             mediaProjection = null;
 
-            OverlayManager.getInstance(context).removeOverlay();
-
             Intent serviceIntent = new Intent(context, AutoPayScreenCaptureService.class);
             context.stopService(serviceIntent);
 
@@ -136,6 +134,8 @@ public class MediaProjectionHandler {
             virtualDisplay.release();
             virtualDisplay = null;
         }
+
+        OverlayManager.getInstance(context).removeOverlay();
     }
 
     private void redirectMain(){

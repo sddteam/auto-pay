@@ -39,13 +39,14 @@ public class AutoPayScreenCaptureService extends Service {
     private static final String TAG = "MediaProjectionService";
     public static final String CHANNEL_ID = "ScreenCaptureChannel";
     private MediaProjectionHandler mediaProjectionHandler;
+    private OverlayManager overlayManager;
 
     @Override
     public void onCreate(){
         super.onCreate();
 
         mediaProjectionHandler = MediaProjectionHandler.getInstance(getApplicationContext());
-        OverlayManager overlayManager = OverlayManager.getInstance(getApplicationContext());
+        overlayManager = OverlayManager.getInstance(getApplicationContext());
 
         try{
             // Create a notification channel for foreground service
@@ -94,6 +95,7 @@ public class AutoPayScreenCaptureService extends Service {
         super.onDestroy();
 
         stopSelf();
+        overlayManager.removeOverlay();
     }
 
 
