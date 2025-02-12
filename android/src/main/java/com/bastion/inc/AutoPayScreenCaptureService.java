@@ -75,7 +75,7 @@ public class AutoPayScreenCaptureService extends Service {
             // Start the service in the foreground
             startForeground(1, notification);
         }catch (Exception e){
-            throw new RuntimeException(e);
+            e.printStackTrace();
         }
     }
 

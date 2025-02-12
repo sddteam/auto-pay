@@ -75,25 +75,47 @@ public class AccessibilityGestures implements GestureService {
             return;
         }
 
-        List<AccessibilityNodeInfo> allNodess = new ArrayList<>();
-        getAllNodesRecursive(rootNodeInfo, allNodess);
+        List<AccessibilityNodeInfo> buttons = rootNodeInfo.findAccessibilityNodeInfosByText(text);
 
-        List<Map.Entry<LocalDateTime, AccessibilityNodeInfo>> allNodes = new ArrayList<>();
-        getAllDatesRecursive(rootNodeInfo, allNodes);
+        if(buttons != null && !buttons.isEmpty()){
+            for (AccessibilityNodeInfo button :
+                    buttons) {
+                if(button.isClickable()){
+                    button.performAction(AccessibilityNodeInfo.ACTION_CLICK);
 
+                    //TODO: Draw bounding box to the button(debugging)
+                    /*OverlayManager overlayManager = OverlayManager.getInstance(context);
+                    Rect bounds = new Rect();
+                    button.getBoundsInScreen(bounds);
+                    if(bounds.width() > 0 && bounds.height() > 0){
+                        overlayManager.drawBoundingBox(bounds);
+                    }*/
 
-        if(!allNodes.isEmpty()){
-            allNodes.stream()
-                    .max(Map.Entry.comparingByKey()).ifPresent(latestNode -> {
-                        AccessibilityNodeInfo node = latestNode.getValue();
-                        if(node != null){
-                            node.performAction(AccessibilityNodeInfo.ACTION_FOCUS);
-                            node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-                        }
-                    });
-        }else{
-            findByText(rootNodeInfo, text);
+                    return;
+                }
+            }
         }
+
+        //TODO: Draw bounding box to the button(debugging)
+
+       /* List<AccessibilityNodeInfo> allNodes = new ArrayList<>();
+        getAllNodesRecursive(rootNodeInfo, allNodes);
+
+        List<Rect> boundsList = new ArrayList<>();
+
+        for (AccessibilityNodeInfo node :
+                allNodes) {
+            Rect bounds = new Rect();
+            node.getBoundsInScreen(bounds);
+
+            if (bounds.width() > 0 && bounds.height() > 0) {
+                boundsList.add(bounds);
+            }
+        }
+
+        OverlayManager overlayManager = OverlayManager.getInstance(context);
+        overlayManager.drawMultipleBoundingBox(boundsList);*/
+
 
         waitFor(GESTURE_CLICK_WAIT_TIME);
     }
@@ -110,31 +132,42 @@ public class AccessibilityGestures implements GestureService {
         List<AccessibilityNodeInfo> allNodes = new ArrayList<>();
         getAllNodesRecursive(rootNodeInfo, allNodes);
 
-        List<Rect> boundsList = new ArrayList<>();
-
         for(AccessibilityNodeInfo node: allNodes){
-            Rect bounds = new Rect();
-
             String text = node.getText() != null ? node.getText().toString() : "";
 
             if(text.contains("Remind me later")){
                 node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
             }
-
-            /*node.getBoundsInScreen(bounds);
-
-            if(bounds.width() > 0 && bounds.height() > 0){
-                boundsList.add(bounds);
-            }*/
         }
 
-        /*OverlayManager overlayManager = OverlayManager.getInstance(context);
-        overlayManager.drawBoundingBox(boundsList);*/
-
+        waitFor(GESTURE_CLICK_WAIT_TIME);
     }
 
-    private void drawBoundingBox(Rect bounds){
+    @Override
+    public void qr(String filename) {
+        AccessibilityNodeInfo rootNodeInfo  = AutoPayAccessibilityService.getInstance().getRootInActiveWindow();
+        if(rootNodeInfo == null){
+            return;
+        }
 
+        List<Map.Entry<LocalDateTime, AccessibilityNodeInfo>> allNodes = new ArrayList<>();
+        getAllDatesRecursive(rootNodeInfo, allNodes);
+
+
+        if(!allNodes.isEmpty()){
+            allNodes.stream()
+                    .max(Map.Entry.comparingByKey()).ifPresent(latestNode -> {
+                        AccessibilityNodeInfo node = latestNode.getValue();
+                        if(node != null){
+                            node.performAction(AccessibilityNodeInfo.ACTION_FOCUS);
+                            node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                        }
+                    });
+        }else{
+            findByText(rootNodeInfo, filename);
+        }
+
+        waitFor(GESTURE_CLICK_WAIT_TIME);
     }
 
     private void findByText(AccessibilityNodeInfo rootNodeInfo, String text){
@@ -206,7 +239,8 @@ public class AccessibilityGestures implements GestureService {
     }
 
     private LocalDateTime extractDateTime(String text){
-        String regex = "(\\w{3}) (\\d{1,2}), (\\d{4}), (\\d{1,2}):(\\d{2}):(\\d{2}) (AM|PM)";
+        text = text.replaceAll("[\u00A0\u202F\u200B]", " ");
+        String regex = "(\\w{3}) (\\d{1,2}), (\\d{4}), (\\d{1,2}):(\\d{2}):(\\d{2}) ?(AM|PM)";
         Pattern pattern = Pattern.compile(regex);
         Matcher matcher = pattern.matcher(text);
         try{

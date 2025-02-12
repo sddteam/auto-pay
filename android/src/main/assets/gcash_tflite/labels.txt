@@ -1,0 +1,5 @@
+0 home
+1 upload_qr
+2 select_qr
+3 payment
+4 login

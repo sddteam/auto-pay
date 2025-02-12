@@ -9,19 +9,28 @@ import android.view.View;
 
 import androidx.annotation.NonNull;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class BoundingBoxView extends View {
-    private final List<Rect> boundsList;
-    private final Paint paint;
+    private final List<Rect> boundsList = new ArrayList<>();
+    private Paint paint;
     public BoundingBoxView(Context context, List<Rect> boundsList) {
         super(context);
 
-        this.boundsList = boundsList;
-        paint = new Paint();
-        paint.setColor(Color.RED);
-        paint.setStyle(Paint.Style.STROKE);
-        paint.setStrokeWidth(5);
+        if(boundsList != null){
+            this.boundsList.addAll(boundsList);
+        }
+
+        paint = createPaint();
+
+    }
+
+    public BoundingBoxView(Context context, Rect singleRect){
+        super(context);
+        if(singleRect != null){
+            this.boundsList.add(singleRect);
+        }
     }
 
     @Override
@@ -30,5 +39,14 @@ public class BoundingBoxView extends View {
         for(Rect rect : boundsList){
             canvas.drawRect(rect, paint);
         }
+    }
+
+    private Paint createPaint(){
+        Paint p = new Paint();
+        p.setColor(Color.RED);
+        p.setStyle(Paint.Style.STROKE);
+        p.setStrokeWidth(5);
+
+        return p;
     }
 }

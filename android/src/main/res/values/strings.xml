@@ -3,4 +3,5 @@
     <string name="overlay_text_stop">Stop</string>
     <string name="omnipay_business_logo">Omnipay Business Logo</string>
     <string name="stop_auto_pay">Stop auto-pay</string>
+    <string name="accessibility_service_description">My Accessibility Service allows automated interactions for enhanced usability.</string>
 </resources>

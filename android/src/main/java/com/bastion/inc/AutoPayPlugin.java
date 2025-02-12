@@ -259,7 +259,9 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
     @Override
     public void onCompleted() {
         Log.d(TAG, "STOP NAVIGATION");
-        //mediaProjectionHandler.stopMediaProjection();
+        if(mediaProjectionHandler != null){
+            mediaProjectionHandler.stopMediaProjection();
+        }
     }
 
     @Override

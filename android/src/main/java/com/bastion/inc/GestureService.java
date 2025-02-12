@@ -10,4 +10,6 @@ public interface GestureService extends AutoCloseable{
     }
 
     void ads();
+
+    void qr(String filename);
 }

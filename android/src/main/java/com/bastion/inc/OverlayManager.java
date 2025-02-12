@@ -94,7 +94,7 @@ public class OverlayManager {
         });
     }
 
-    public void drawBoundingBox(List<Rect> allBounds){
+    public void drawMultipleBoundingBox(List<Rect> allBounds){
         if(boundingBoxView != null){
             windowManager.removeView(boundingBoxView);
         }
@@ -108,6 +108,19 @@ public class OverlayManager {
         );
 
         windowManager.addView(boundingBoxView, params);
+    }
+
+    public void drawBoundingBox(Rect bounds){
+        BoundingBoxView boundingBoxView1 = new BoundingBoxView(context, bounds);
+        WindowManager.LayoutParams params = new WindowManager.LayoutParams(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                PixelFormat.TRANSLUCENT
+        );
+
+        windowManager.addView(boundingBoxView1, params);
     }
 
 

@@ -17,13 +17,18 @@ import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
+import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.core.Rect;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -34,7 +39,7 @@ public class OpenCVHandler implements ProjectionImageListener {
     private final String TAG = "OPEN_CV";
     private final Context context;
     private ApplicationStateListener applicationStateListener;
-    private final Map<ActionState, Mat> preloadedStateTemplates = new HashMap<>();
+    private final Map<ActionState, List<Mat>> preloadedStateTemplates = new HashMap<>();
     private final Map<String, Mat> preloadedButtonTemplates = new HashMap<>();
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
     AtomicReference<String> previousFrameHash = new AtomicReference<>();
@@ -76,13 +81,32 @@ public class OpenCVHandler implements ProjectionImageListener {
         return mat;
     }
 
+    private List<Mat> loadTemplateList(String[] paths) throws IOException {
+        List<Mat> templates = new ArrayList<>();
+        for (String path: paths){
+            Mat template = loadTemplate(path);
+            templates.add(template);
+        }
+
+        return templates;
+    }
+
     private void preloadTemplates(){
         try{
-            //preloadedStateTemplates.put(ActionState.LOGIN, loadTemplate("opencv-template/gcash/states/1 login.jpg"));
-            preloadedStateTemplates.put(ActionState.HOME, loadTemplate("opencv-template/gcash/states/2 home.jpg"));
-            preloadedStateTemplates.put(ActionState.UPLOAD_QR, loadTemplate("opencv-template/gcash/states/3 qrscan.jpg"));
-            preloadedStateTemplates.put(ActionState.PAYMENT, loadTemplate("opencv-template/gcash/states/5 payment.jpg"));
-            preloadedStateTemplates.put(ActionState.SELECT_QR, loadTemplate("opencv-template/gcash/states/4 uploadqr.jpg"));
+            preloadedStateTemplates.put(ActionState.HOME, loadTemplateList(new String[]{
+                    "opencv-template/gcash/states/2 home.jpg",
+                    "opencv-template/gcash/states/2a home.jpg",
+            }));
+            preloadedStateTemplates.put(ActionState.UPLOAD_QR, loadTemplateList(new String[]{
+                    "opencv-template/gcash/states/3 qrscan.jpg"
+            }));
+            preloadedStateTemplates.put(ActionState.SELECT_QR, loadTemplateList(new String[]{
+                    "opencv-template/gcash/states/4 uploadqr.jpg",
+                    "opencv-template/gcash/states/4a uploadqr.jpg"
+            }));
+            preloadedStateTemplates.put(ActionState.PAYMENT, loadTemplateList(new String[]{
+                    "opencv-template/gcash/states/5 payment.jpg"
+            }));
             preloadedButtonTemplates.put("qrButton", loadTemplate("opencv-template/gcash/buttons/qrbutton.jpg"));
             preloadedButtonTemplates.put("uploadQRButton", loadTemplate("opencv-template/gcash/buttons/uploadqr.jpg"));
         }catch (Exception e){
@@ -92,6 +116,8 @@ public class OpenCVHandler implements ProjectionImageListener {
 
     @Override
     public void onImage(Bitmap bitmap) {
+
+        //Log.d(TAG, "Screen captured!");
         if (isProcessing.get()) {
             recycleBitmap(bitmap);
             return; // Skip this frame
@@ -112,83 +138,118 @@ public class OpenCVHandler implements ProjectionImageListener {
 
         executorService.submit(() -> {
             try{
-                ActionState bestState = null;
-                double highestMaxValue = Double.NEGATIVE_INFINITY;
-
                 Mat screenMat = convertBitmapToMat(bitmap);
-                for(Map.Entry<ActionState, Mat> entry : preloadedStateTemplates.entrySet()){
-                    ActionState state = entry.getKey();
-                    Mat template = entry.getValue();
 
-                    Mat matchResult = loadAssetAndMatch(template, screenMat);
-                    double maxVal = getMaxVal(matchResult);
+                MatchResult matchResult = findBestMatch(screenMat, 0.1);
+                tapBestMatch(matchResult, screenMat, MAX_CLICK);
 
-                    Log.d(TAG, "CONFIDENCE: " + maxVal + " STATE: " + state);
 
-                    if (maxVal > highestMaxValue) {
-                        highestMaxValue = maxVal;
-                        bestState = state;
-                    }
-                }
-
-                if(highestMaxValue <= 0.1){
-                    return;
-                }
-
-                if(bestState != null){
-                    Log.d(TAG, "WINNER: " + bestState);
-
-                    if (bestState.equals(lastState)) {
-                        clickCount++;
-                    } else {
-                        clickCount = 1;
-                        lastState = bestState;
-                    }
-
-                    if(clickCount >= MAX_CLICK){
-                        JSObject ret = new JSObject();
-                        String message = "Failed to proceed in " + bestState;
-                        ret.put("value", message);
-
-                        overlayManager.updateOverlayMessage(message);
-                        //applicationStateListener.onWarning(ret);
-                    }else{
-                        overlayManager.updateOverlayMessage("AutoPay processing...");
-                    }
-
-                    if(bestState.equals(ActionState.HOME)){
-                        currentState = ActionState.HOME;
-                        Location location = findButtonLocation(
-                                preloadedButtonTemplates.get("qrButton"),
-                                screenMat);
-                        accessibilityGestures.click(location);
-                    }
-                    if(bestState.equals(ActionState.UPLOAD_QR)){
-                        currentState = ActionState.UPLOAD_QR;
-                        accessibilityGestures.click(findButtonLocation(
-                                preloadedButtonTemplates.get("uploadQRButton"),
-                                screenMat
-                        ));
-                    }
-                    if(bestState.equals(ActionState.SELECT_QR)){
-                        currentState = ActionState.SELECT_QR;
-                        accessibilityGestures.find("qr_code.png");
-                    }
-                    if(bestState.equals(ActionState.PAYMENT)){
-                        //HANDLE THE STOP EXECUTION WITH PLUGIN METHOD FOR NAVIGATE
-                        applicationStateListener.onCompleted();
-                    }
-                }
             }catch (Exception e){
                 applicationStateListener.onError(e);
             }finally {
                 isProcessing.set(false);
-
                 recycleBitmap(bitmap);
             }
         });
     }
 
+    private void tapBestMatch(MatchResult matchResult, Mat screenMat, int timeout){
+        if(matchResult == null){
+            System.out.println("No match found.");
+            return;
+        }
+
+        Log.d(TAG, "WINNER: " + matchResult.templateName);
+
+        if (matchResult.templateName.equals(lastState)) {
+            clickCount++;
+        } else {
+            clickCount = 1;
+            lastState = matchResult.templateName;
+        }
+
+        if(clickCount >= timeout){
+            JSObject ret = new JSObject();
+            String message = "Failed to proceed in " + matchResult.templateName;
+            ret.put("value", message);
+
+            overlayManager.updateOverlayMessage(message);
+
+            //TODO: RETURN FOR LOGGING IN CLIENT SIDE
+            //applicationStateListener.onWarning(ret);
+        }else{
+            overlayManager.updateOverlayMessage("AutoPay processing...");
+        }
+
+        if(matchResult.templateName.equals(ActionState.HOME)){
+            currentState = ActionState.HOME;
+            accessibilityGestures.find("QR");
+        }
+        if(matchResult.templateName.equals(ActionState.UPLOAD_QR)){
+            currentState = ActionState.UPLOAD_QR;
+            accessibilityGestures.click(findButtonLocation(
+                    preloadedButtonTemplates.get("uploadQRButton"),
+                    screenMat
+            ));
+        }
+        if(matchResult.templateName.equals(ActionState.SELECT_QR)){
+            currentState = ActionState.SELECT_QR;
+            String currentDate = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
+            String fileName = "qr_code_" + currentDate + ".png";
+            accessibilityGestures.qr(fileName);
+        }
+        if(matchResult.templateName.equals(ActionState.PAYMENT)){
+            //HANDLE THE STOP EXECUTION WITH PLUGIN METHOD FOR NAVIGATE
+            //applicationStateListener.onCompleted();
+        }
+    }
+
+
+    private MatchResult findBestMatch(Mat screenMat, double threshold){
+        double bestMatchScore = 0;
+        ActionState bestMatchTemplate = null;
+        Point bestMatchPoint = null;
+
+        for(Map.Entry<ActionState, List<Mat>> entry : preloadedStateTemplates.entrySet()){
+            List<Mat> templates = entry.getValue();
+
+            double bestMatchScoreFromState = 0;
+            ActionState bestMatchTemplateFromState = null;
+            Point bestMatchPointFromState = null;
+            for(Mat template: templates){
+                Mat result = new Mat();
+
+                if (template.rows() > screenMat.rows() || template.cols() > screenMat.cols()) {
+                    Size size = new Size(Math.min(screenMat.cols(), template.cols()), Math.min(screenMat.rows(), template.rows()));
+                    Imgproc.resize(template, template, size);
+                }
+
+                Imgproc.matchTemplate(screenMat, template, result, Imgproc.TM_CCOEFF_NORMED);
+
+                Core.MinMaxLocResult mmr = Core.minMaxLoc(result);
+
+                if(mmr.maxVal > bestMatchScoreFromState){
+                    bestMatchScoreFromState = mmr.maxVal;
+                    bestMatchTemplateFromState = entry.getKey();
+                    bestMatchPointFromState = mmr.maxLoc;
+                }
+            }
+
+            if(bestMatchScoreFromState > bestMatchScore){
+                bestMatchScore = bestMatchScoreFromState;
+                bestMatchTemplate = bestMatchTemplateFromState;
+                bestMatchPoint = bestMatchPointFromState;
+            }
+
+            Log.d(TAG, "CONFIDENCE: " + bestMatchScoreFromState + " STATE: "+ entry.getKey());
+        }
+
+        if(bestMatchScore >= threshold){
+            return new MatchResult(bestMatchTemplate, bestMatchPoint, bestMatchScore);
+        }
+
+        return null;
+    }
     private double getMaxVal(Mat result){
         if (result.empty()) {
             return -1;
