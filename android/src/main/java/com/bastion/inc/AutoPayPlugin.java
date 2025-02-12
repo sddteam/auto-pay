@@ -10,6 +10,7 @@ import com.getcapacitor.Bridge;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.AssetFileDescriptor;
 import android.media.projection.MediaProjectionManager;
 import android.net.Uri;
 import android.provider.Settings;
@@ -19,6 +20,12 @@ import android.view.accessibility.AccessibilityManager;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 
+import org.tensorflow.lite.Interpreter;
+
+import java.io.FileInputStream;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+import java.util.List;
 import java.util.Objects;
 
 @CapacitorPlugin(name = "AutoPay")
@@ -32,7 +39,10 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
     private ActivityResultLauncher<Intent> screenCaptureLauncher;
     private MediaProjectionHandler mediaProjectionHandler;
     private OpenCVHandler openCVHandler;
+    private TFLiteHandler tfLiteHandler;
     private Intent serviceIntent;
+
+
 
     private AutoPay implementation = new AutoPay();
 
@@ -44,6 +54,8 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
 
         Log.d("AutoPayPlugin", "Resources cleaned up.");
     }
+
+
 
     @Override
     public void load(){
@@ -116,10 +128,11 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
     public void navigateGCash(PluginCall call){
         try {
             Context context = getContext();
-            openCVHandler = new OpenCVHandler(context);
-            openCVHandler.setApplicationStateListener(this);
+            //openCVHandler = new OpenCVHandler(context);
+            //openCVHandler.setApplicationStateListener(this);
+            tfLiteHandler = new TFLiteHandler(context);
             mediaProjectionHandler = MediaProjectionHandler.getInstance(context.getApplicationContext());
-            mediaProjectionHandler.setProjectionImageListener(openCVHandler);
+            mediaProjectionHandler.setProjectionImageListener(tfLiteHandler);
             mediaProjectionHandler.setApplicationStateListener(this);
 
             if (!isAccessibilityServiceEnabled(context)) {
