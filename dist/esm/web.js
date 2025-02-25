@@ -2,7 +2,7 @@ import { WebPlugin } from '@capacitor/core';
 export class AutoPayWeb extends WebPlugin {
     checkOverlayPermission() {
         const result = {
-            value: false
+            value: true
         };
         return new Promise((resolve, reject) => {
             try {

@@ -9,7 +9,7 @@ const AutoPay = core.registerPlugin('AutoPay', {
 class AutoPayWeb extends core.WebPlugin {
     checkOverlayPermission() {
         const result = {
-            value: false
+            value: true
         };
         return new Promise((resolve, reject) => {
             try {

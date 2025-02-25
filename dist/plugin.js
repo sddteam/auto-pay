@@ -8,7 +8,7 @@ var capacitorAutoPay = (function (exports, core) {
     class AutoPayWeb extends core.WebPlugin {
         checkOverlayPermission() {
             const result = {
-                value: false
+                value: true
             };
             return new Promise((resolve, reject) => {
                 try {
