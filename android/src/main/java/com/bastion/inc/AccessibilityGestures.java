@@ -251,7 +251,7 @@ public class AccessibilityGestures implements GestureService {
 
     private LocalDateTime extractDateTime(String text) {
         if(text.isEmpty()){
-            return
+            return null;
         }
         text = text.replaceAll("[\u00A0\u202F\u200B]", " ");
 
