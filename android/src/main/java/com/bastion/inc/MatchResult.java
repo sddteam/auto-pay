@@ -1,5 +1,6 @@
 package com.bastion.inc;
 
+import org.opencv.core.Mat;
 import org.opencv.core.Point;
 
 public class MatchResult {

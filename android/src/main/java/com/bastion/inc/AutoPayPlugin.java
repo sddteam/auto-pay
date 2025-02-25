@@ -116,7 +116,7 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
     public void navigateGCash(PluginCall call){
         try {
             Context context = getContext();
-            openCVHandler = new OpenCVHandler(context);
+            openCVHandler = OpenCVHandler.getInstance(context.getApplicationContext());
             openCVHandler.setApplicationStateListener(this);
             mediaProjectionHandler = MediaProjectionHandler.getInstance(context.getApplicationContext());
             mediaProjectionHandler.setProjectionImageListener(openCVHandler);

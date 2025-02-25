@@ -5,7 +5,7 @@ import type { AutoPayPlugin } from './definitions';
 export class AutoPayWeb extends WebPlugin implements AutoPayPlugin {
   checkOverlayPermission(): Promise<any> {
     const result = {
-      value: false
+      value: true
     }
     return new Promise((resolve, reject) => {
       try{

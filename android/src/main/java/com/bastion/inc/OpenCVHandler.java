@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Pair;
 
@@ -48,8 +49,18 @@ public class OpenCVHandler implements ProjectionImageListener {
     private ActionState currentState = ActionState.HOME;
     private int clickCount = 0;
     private ActionState lastState = null;
-    private static final int MAX_CLICK = 5;
+    private static final int MAX_CLICK = 3;
     private OverlayManager overlayManager;
+    private final double TEMP_DENSITY_DPI = 480.0;
+    private static OpenCVHandler instance;
+
+    public static synchronized OpenCVHandler getInstance(Context context){
+        if(instance == null){
+            instance = new OpenCVHandler(context);
+        }
+
+        return instance;
+    }
 
     public void setApplicationStateListener(ApplicationStateListener listener){
         this.applicationStateListener = listener;
@@ -93,6 +104,9 @@ public class OpenCVHandler implements ProjectionImageListener {
 
     private void preloadTemplates(){
         try{
+            preloadedStateTemplates.put(ActionState.LOGIN, loadTemplateList(new String[]{
+                    "opencv-template/gcash/states/1 login.jpg",
+            }));
             preloadedStateTemplates.put(ActionState.HOME, loadTemplateList(new String[]{
                     "opencv-template/gcash/states/2 home.jpg",
                     "opencv-template/gcash/states/2a home.jpg",
@@ -143,9 +157,9 @@ public class OpenCVHandler implements ProjectionImageListener {
                 MatchResult matchResult = findBestMatch(screenMat, 0.1);
                 tapBestMatch(matchResult, screenMat, MAX_CLICK);
 
-
             }catch (Exception e){
                 applicationStateListener.onError(e);
+                overlayManager.updateOverlayMessage(e.getLocalizedMessage());
             }finally {
                 isProcessing.set(false);
                 recycleBitmap(bitmap);
@@ -153,6 +167,25 @@ public class OpenCVHandler implements ProjectionImageListener {
         });
     }
 
+    public Mat takeScreenshot(){
+        try {
+            Bitmap bitmap = null;
+            int retries = 5;  // Max number of attempts
+            int delayMs = 50; // Delay in milliseconds between retries
+
+            while (retries-- > 0 && bitmap == null) {
+                bitmap = MediaProjectionHandler.getInstance(context.getApplicationContext()).captureLatestImage();
+                if (bitmap == null) {
+                    try { Thread.sleep(delayMs); } catch (InterruptedException ignored) {}
+                }
+            }
+
+            return (bitmap != null) ? convertBitmapToMat(bitmap) : null;
+
+        } catch (Exception e) {
+            return null;
+        }
+    }
     private void tapBestMatch(MatchResult matchResult, Mat screenMat, int timeout){
         if(matchResult == null){
             System.out.println("No match found.");
@@ -190,7 +223,7 @@ public class OpenCVHandler implements ProjectionImageListener {
             accessibilityGestures.click(findButtonLocation(
                     preloadedButtonTemplates.get("uploadQRButton"),
                     screenMat
-            ));
+            ), matchResult.templateName);
         }
         if(matchResult.templateName.equals(ActionState.SELECT_QR)){
             currentState = ActionState.SELECT_QR;
@@ -204,8 +237,7 @@ public class OpenCVHandler implements ProjectionImageListener {
         }
     }
 
-
-    private MatchResult findBestMatch(Mat screenMat, double threshold){
+    public MatchResult findBestMatch(Mat screenMat, double threshold){
         double bestMatchScore = 0;
         ActionState bestMatchTemplate = null;
         Point bestMatchPoint = null;
@@ -217,14 +249,13 @@ public class OpenCVHandler implements ProjectionImageListener {
             ActionState bestMatchTemplateFromState = null;
             Point bestMatchPointFromState = null;
             for(Mat template: templates){
+                Size newSize = normalizeScaling(template);
+
+                Mat resizedTemplate = new Mat();
+                Imgproc.resize(template, resizedTemplate, newSize);
+
                 Mat result = new Mat();
-
-                if (template.rows() > screenMat.rows() || template.cols() > screenMat.cols()) {
-                    Size size = new Size(Math.min(screenMat.cols(), template.cols()), Math.min(screenMat.rows(), template.rows()));
-                    Imgproc.resize(template, template, size);
-                }
-
-                Imgproc.matchTemplate(screenMat, template, result, Imgproc.TM_CCOEFF_NORMED);
+                Imgproc.matchTemplate(screenMat, resizedTemplate, result, Imgproc.TM_CCOEFF_NORMED);
 
                 Core.MinMaxLocResult mmr = Core.minMaxLoc(result);
 
@@ -233,6 +264,8 @@ public class OpenCVHandler implements ProjectionImageListener {
                     bestMatchTemplateFromState = entry.getKey();
                     bestMatchPointFromState = mmr.maxLoc;
                 }
+
+                resizedTemplate.release();
             }
 
             if(bestMatchScoreFromState > bestMatchScore){
@@ -250,33 +283,31 @@ public class OpenCVHandler implements ProjectionImageListener {
 
         return null;
     }
-    private double getMaxVal(Mat result){
-        if (result.empty()) {
-            return -1;
-        }
-        Core.MinMaxLocResult mmr = Core.minMaxLoc(result);
-        return mmr.maxVal;
-    }
 
     private Location findButtonLocation(Mat template, Mat screenMat){
         try{
             Mat result = new Mat();
             Rect roi = new Rect();
 
+            Size newSize = scaleButtonTemplate(template);
+
+            Mat resizedTemp = new Mat();
+            Imgproc.resize(template , resizedTemp, newSize);
+
             if(currentState == ActionState.HOME){
                 int[] roiPath = {1, 1};
-                Pair<Mat, Rect> roiResult = locateTemplateInROI(screenMat, template, roiPath, false);
+                Pair<Mat, Rect> roiResult = locateTemplateInROI(screenMat, resizedTemp, roiPath, false);
                 roi = roiResult.second;
 
-                Imgproc.matchTemplate(roiResult.first, template, result, Imgproc.TM_SQDIFF_NORMED);
+                Imgproc.matchTemplate(roiResult.first, resizedTemp, result, Imgproc.TM_SQDIFF_NORMED);
             } else if (currentState == ActionState.SELECT_QR) {
                 int[] roiPath = {1};
-                Pair<Mat, Rect> roiResult = locateTemplateInROI(screenMat, template, roiPath, true);
+                Pair<Mat, Rect> roiResult = locateTemplateInROI(screenMat, resizedTemp, roiPath, true);
                 roi = roiResult.second;
 
-                Imgproc.matchTemplate(roiResult.first, template, result, Imgproc.TM_SQDIFF_NORMED);
+                Imgproc.matchTemplate(roiResult.first, resizedTemp, result, Imgproc.TM_SQDIFF_NORMED);
             }else{
-                Imgproc.matchTemplate(screenMat, template, result, Imgproc.TM_SQDIFF_NORMED);
+                Imgproc.matchTemplate(screenMat, resizedTemp, result, Imgproc.TM_SQDIFF_NORMED);
             }
 
             //Imgproc.matchTemplate(screenMat, template, result, Imgproc.TM_SQDIFF_NORMED);
@@ -313,6 +344,34 @@ public class OpenCVHandler implements ProjectionImageListener {
         }
 
         return null;
+    }
+
+    private Size normalizeScaling(Mat template){
+        if(template.rows() <= 400){
+            return scaleButtonTemplate(template);
+        }else{
+            return scaleStateTemplate(template);
+        }
+    }
+
+    private Size scaleButtonTemplate(Mat template){
+        DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
+        double scaleX = (double) displayMetrics.widthPixels / 1080;
+        double scaleY = (double) displayMetrics.heightPixels / 2340;
+        double scaleFactor = Math.min(scaleX, scaleY);
+
+        int newWidth = (int) Math.round(template.cols() * scaleFactor);
+        int newHeight = (int) Math.round(template.rows() * scaleFactor);
+
+        return new Size(newWidth, newHeight);
+    }
+
+    private Size scaleStateTemplate(Mat template){
+        DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
+        double scaleX = (double) displayMetrics.widthPixels / template.cols();
+        double scaleY = (double) displayMetrics.heightPixels / template.rows();
+
+        return new Size(template.cols() * scaleX, template.rows() * scaleY);
     }
 
     private Pair<Mat, Rect> locateTemplateInROI(Mat screenMat, Mat template, int[] roiPath, boolean splitVertically) {
@@ -395,23 +454,6 @@ public class OpenCVHandler implements ProjectionImageListener {
         return null;
     }
 
-    private Mat loadAssetAndMatch(Mat template, Mat screenMat){
-        if (screenMat.dims() > 2 || template.dims() > 2) {
-            throw new IllegalArgumentException("Both images must be 2D");
-        }
-
-        Mat processedMat = screenMat.clone();
-
-        if (template.rows() > processedMat.rows() || template.cols() > processedMat.cols()) {
-            Size size = new Size(Math.min(processedMat.cols(), template.cols()), Math.min(processedMat.rows(), template.rows()));
-            Imgproc.resize(template, template, size);
-        }
-
-        Mat result = new Mat();
-        Imgproc.matchTemplate(processedMat, template, result, Imgproc.TM_CCOEFF_NORMED);
-
-        return result;
-    }
     public Bitmap convertMatToBitmap(Mat mat) {
         Bitmap bitmap = Bitmap.createBitmap(mat.cols(), mat.rows(), Bitmap.Config.ARGB_8888);
         Utils.matToBitmap(mat, bitmap);

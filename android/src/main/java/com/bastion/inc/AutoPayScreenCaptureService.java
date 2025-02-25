@@ -70,6 +70,7 @@ public class AutoPayScreenCaptureService extends Service {
                     .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Stop Capture", stopPendingIntent)
                     .build();
 
+            //overlayManager.showWhiteOverlay();
             overlayManager.showOverlay("AutoPay processing...");
 
             // Start the service in the foreground

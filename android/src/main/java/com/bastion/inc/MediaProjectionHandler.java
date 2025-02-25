@@ -30,6 +30,7 @@ public class MediaProjectionHandler {
 
     private ProjectionImageListener projectionImageListener;
     private ApplicationStateListener applicationStateListener;
+    private boolean isProcessingImage = false;
 
 
     public void setProjectionImageListener(ProjectionImageListener listener){
@@ -71,7 +72,7 @@ public class MediaProjectionHandler {
                     }
                 }
             }, null );
-            imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2);
+            imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 5);
             virtualDisplay = mediaProjection.createVirtualDisplay(
                     "ScreenCapture",
                     width,
@@ -85,8 +86,12 @@ public class MediaProjectionHandler {
             );
 
             imageReader.setOnImageAvailableListener(reader -> {
+                if (isProcessingImage) {
+                    return; // Skip if the previous image is still being processed
+                }
                 Image image = null;
                 try{
+                    isProcessingImage = true;
                     image = reader.acquireLatestImage();
                     if(image != null){
                         Bitmap bitmap = convertImageToBitmap(image, width, height);
@@ -96,6 +101,7 @@ public class MediaProjectionHandler {
                     if(image != null){
                         image.close();
                     }
+                    isProcessingImage = false;
                 }
             }, new Handler(Looper.getMainLooper()));
 
@@ -104,6 +110,29 @@ public class MediaProjectionHandler {
         }
     }
 
+    public Bitmap captureLatestImage() {
+        if (imageReader == null) {
+            Log.e("Screenshot", "ImageReader is null!");
+            return null;
+        }
+
+        Image image = null;
+        try {
+            image = imageReader.acquireLatestImage();
+            if (image != null) {
+                Bitmap bitmap = convertImageToBitmap(image, image.getWidth(), image.getHeight());
+                image.close(); // ✅ Close the image to free memory
+                return bitmap;
+            }
+        } catch (Exception e) {
+            Log.e("Screenshot", "Failed to capture screenshot: " + e.getMessage());
+        } finally {
+            if (image != null) {
+                image.close();
+            }
+        }
+        return null;
+    }
     private Bitmap convertImageToBitmap(Image image, int width, int height){
         Image.Plane[] planes = image.getPlanes();
         ByteBuffer buffer = planes[0].getBuffer();

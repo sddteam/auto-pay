@@ -28,6 +28,7 @@ public class OverlayManager {
     private static OverlayManager instance;
     private final WindowManager windowManager;
     private View overlayView;
+    private View whiteOverlayView;
     private final Context context;
     private final Handler mainHandler;
     private final MediaProjectionHandler mediaProjectionHandler;
@@ -54,6 +55,30 @@ public class OverlayManager {
         }
 
         return instance;
+    }
+
+
+    public void showWhiteOverlay(){
+        mainHandler.post(() -> {
+            try{
+                LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+                whiteOverlayView = inflater.inflate(R.layout.white_overlay, null);
+
+                WindowManager.LayoutParams params = new WindowManager.LayoutParams(
+                        WindowManager.LayoutParams.MATCH_PARENT,
+                        WindowManager.LayoutParams.MATCH_PARENT,
+                        WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                        PixelFormat.TRANSLUCENT
+                );
+
+                params.gravity = Gravity.TOP | Gravity.START;
+
+                windowManager.addView(whiteOverlayView, params);
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+        });
     }
 
     public void showOverlay(String message){

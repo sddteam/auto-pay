@@ -8,6 +8,8 @@ import android.graphics.Rect;
 import android.util.Log;
 import android.view.accessibility.AccessibilityNodeInfo;
 
+import org.opencv.core.Mat;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Month;
@@ -27,29 +29,18 @@ public class AccessibilityGestures implements GestureService {
     private final Context context;
     private final int GESTURE_CLICK_DELAY = 1000;
     private final int GESTURE_CLICK_DURATION = 100;
-    private final int GESTURE_CLICK_WAIT_TIME = 3500;
-    private static final Map<String, String> MONTH_ABBREVIATIONS = new HashMap<>();
-
-    static {
-        MONTH_ABBREVIATIONS.put("JAN", "JANUARY");
-        MONTH_ABBREVIATIONS.put("FEB", "FEBRUARY");
-        MONTH_ABBREVIATIONS.put("MAR", "MARCH");
-        MONTH_ABBREVIATIONS.put("APR", "APRIL");
-        MONTH_ABBREVIATIONS.put("MAY", "MAY");
-        MONTH_ABBREVIATIONS.put("JUN", "JUNE");
-        MONTH_ABBREVIATIONS.put("JUL", "JULY");
-        MONTH_ABBREVIATIONS.put("AUG", "AUGUST");
-        MONTH_ABBREVIATIONS.put("SEP", "SEPTEMBER");
-        MONTH_ABBREVIATIONS.put("OCT", "OCTOBER");
-        MONTH_ABBREVIATIONS.put("NOV", "NOVEMBER");
-        MONTH_ABBREVIATIONS.put("DEC", "DECEMBER");
-    }
+    private final int GESTURE_CLICK_WAIT_TIME = 3000;
+    private static final Map<String, Integer> MONTH_ABBREVIATIONS = new HashMap<>() {{
+        put("JAN", 1); put("FEB", 2); put("MAR", 3); put("APR", 4);
+        put("MAY", 5); put("JUN", 6); put("JUL", 7); put("AUG", 8);
+        put("SEP", 9); put("OCT", 10); put("NOV", 11); put("DEC", 12);
+    }};
 
     public AccessibilityGestures(Context context){
         this.context = context;
     }
     @Override
-    public void click(Location location, int times) {
+    public void click(Location location, int times, ActionState state) {
         if(location == null){
             return;
         }
@@ -64,6 +55,26 @@ public class AccessibilityGestures implements GestureService {
         for (int i = 0; i < times; i++) {
             performGesture(strokeDescription);
         }
+       /* OpenCVHandler openCVHandler = OpenCVHandler.getInstance(context.getApplicationContext());
+        Mat screenMat = openCVHandler.takeScreenshot();
+
+        if(screenMat != null){
+            MatchResult matchResult;
+
+            do{
+                matchResult = openCVHandler.findBestMatch(screenMat, 0.1);
+
+                Log.d(TAG, "RECHECK SCREEN - lastScreen " +  state + "currentScreen" + matchResult.templateName);
+
+                if(matchResult.templateName.equals(state)){
+                    waitFor(1000);
+                    screenMat = openCVHandler.takeScreenshot();
+                }
+            }while (!matchResult.templateName.equals(state));
+
+
+        }*/
+
 
         waitFor(GESTURE_CLICK_WAIT_TIME);
     }
@@ -238,38 +249,53 @@ public class AccessibilityGestures implements GestureService {
 
     }
 
-    private LocalDateTime extractDateTime(String text){
+    private LocalDateTime extractDateTime(String text) {
+        if(text.isEmpty()){
+            return
+        }
         text = text.replaceAll("[\u00A0\u202F\u200B]", " ");
-        String regex = "(\\w{3}) (\\d{1,2}), (\\d{4}), (\\d{1,2}):(\\d{2}):(\\d{2}) ?(AM|PM)";
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(text);
-        try{
-            if(matcher.find()){
-                String month = matcher.group(0);
-                String monthAbrev = month.substring(0, 3).toUpperCase();
-                String fullMonth = MONTH_ABBREVIATIONS.get(monthAbrev);
-                int day = Integer.parseInt(matcher.group(2));
-                int year = Integer.parseInt(matcher.group(3));
-                int hour = Integer.parseInt(matcher.group(4));
-                int minute = Integer.parseInt(matcher.group(5));
-                int second = Integer.parseInt(matcher.group(6));
-                String amPm = matcher.group(7);
 
-                DateTimeFormatter monthFormatter = DateTimeFormatter.ofPattern("MMM");
-                int monthNumber = Month.valueOf(fullMonth.toUpperCase()).getValue();
+        // Patterns for both formats
+        String regex1 = "Photo taken on (\\w{3}) (\\d{1,2}), (\\d{4}), (\\d{1,2}):(\\d{2}):(\\d{2}) ?(AM|PM)";
+        String regex2 = "Photo taken on (\\d{1,2}) (\\w{3}) (\\d{4}), (\\d{1,2}):(\\d{2}):(\\d{2}) ?(am|pm)";
 
-                if(amPm.equalsIgnoreCase("PM") && hour != 12){
-                    hour += 12;
-                } else if (amPm.equalsIgnoreCase("AM") && hour == 12) {
-                    hour = 0;
-                }
+        Pattern pattern1 = Pattern.compile(regex1);
+        Pattern pattern2 = Pattern.compile(regex2);
 
-                return LocalDateTime.of(year, monthNumber, day, hour, minute, second);
+        Matcher matcher1 = pattern1.matcher(text);
+        Matcher matcher2 = pattern2.matcher(text);
+
+        try {
+            if (matcher1.find()) {
+                return parseDateTime(matcher1, true);  // Format 1: "Jan 29, 2025"
+            } else if (matcher2.find()) {
+                return parseDateTime(matcher2, false); // Format 2: "20 Feb 2025"
             }
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
         return null;
+    }
+
+    private LocalDateTime parseDateTime(Matcher matcher, boolean format1) {
+        String monthAbbrev = format1 ? matcher.group(1).toUpperCase() : matcher.group(2).toUpperCase();
+        int day = format1 ? Integer.parseInt(matcher.group(2)) : Integer.parseInt(matcher.group(1));
+        int year = Integer.parseInt(matcher.group(3));
+        int hour = Integer.parseInt(matcher.group(4));
+        int minute = Integer.parseInt(matcher.group(5));
+        int second = Integer.parseInt(matcher.group(6));
+        String amPm = matcher.group(7);
+
+        int monthNumber = MONTH_ABBREVIATIONS.get(monthAbbrev);
+
+        // Convert 12-hour format to 24-hour format
+        if (amPm.equalsIgnoreCase("PM") && hour != 12) {
+            hour += 12;
+        } else if (amPm.equalsIgnoreCase("AM") && hour == 12) {
+            hour = 0;
+        }
+
+        return LocalDateTime.of(year, monthNumber, day, hour, minute, second);
     }
 
     private void performGesture(GestureDescription.StrokeDescription strokeDescription){
