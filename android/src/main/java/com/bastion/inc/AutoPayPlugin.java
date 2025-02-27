@@ -28,62 +28,15 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
     private String ENABLE_ACCESSIBILITY_CBID;
     private String ENABLE_OVERLAY_CIBD;
     private String NAVIGATE_GCASH_CIBD;
-    private MediaProjectionManager mediaProjectionManager;
     private ActivityResultLauncher<Intent> screenCaptureLauncher;
-    private MediaProjectionHandler mediaProjectionHandler;
-    private OpenCVHandler openCVHandler;
-    private Intent serviceIntent;
 
     private AutoPay implementation = new AutoPay();
-
-    private void cleanupResources() {
-        // Stop the screen capture launcher
-        if (screenCaptureLauncher != null) {
-            // Handle any additional cleanup related to screen capture
-        }
-
-        Log.d("AutoPayPlugin", "Resources cleaned up.");
-    }
 
     @Override
     public void load(){
         super.load();
 
         bridge = getBridge();
-
-        screenCaptureLauncher = getActivity().registerForActivityResult(
-            new ActivityResultContracts.StartActivityForResult(),
-            result -> {
-                PluginCall savedCall = bridge.getSavedCall(NAVIGATE_GCASH_CIBD);
-                JSObject ret = new JSObject();
-
-                if(savedCall == null){
-                    return;
-                }
-                if (result.getResultCode() == Activity.RESULT_OK){
-                    ret.put("value", true);
-                    savedCall.resolve(ret);
-                    Intent data = result.getData();
-
-                    if(data != null){
-                        try{
-                            mediaProjectionHandler.startMediaProjection(getContext(), data);
-                        }catch(Exception e){
-                            throw new RuntimeException(e);
-                        }
-                    }
-                }else{
-                    if(serviceIntent != null){
-                        getContext().stopService(serviceIntent);
-                    }
-
-                    ret.put("value", false);
-                    savedCall.resolve(ret);
-                }
-
-                savedCall.release(bridge);
-            }
-        );
     }
 
     @PluginMethod
@@ -96,8 +49,6 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
     }
     @PluginMethod
     public void stopNavigation(PluginCall call){
-        cleanupResources();
-
         JSObject ret = new JSObject();
         ret.put("value", "success");
         call.resolve(ret);
@@ -116,31 +67,17 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
     public void navigateGCash(PluginCall call){
         try {
             Context context = getContext();
-            openCVHandler = OpenCVHandler.getInstance(context.getApplicationContext());
-            openCVHandler.setApplicationStateListener(this);
-            mediaProjectionHandler = MediaProjectionHandler.getInstance(context.getApplicationContext());
-            mediaProjectionHandler.setProjectionImageListener(openCVHandler);
-            mediaProjectionHandler.setApplicationStateListener(this);
 
-            if (!isAccessibilityServiceEnabled(context)) {
+            if(!isAccessibilityServiceEnabled(context)){
                 throw new AutoPayException(AutoPayErrorCodes.ACCESSIBILITY_SERVICE_NOT_ENABLED_ERROR);
             } else if (!Settings.canDrawOverlays(context)) {
                 throw new AutoPayException(AutoPayErrorCodes.OVERLAY_PERMISSION_NOT_ENABLED_ERROR);
-            } else {
-                serviceIntent = new Intent(getContext(), AutoPayScreenCaptureService.class);
-                getContext().startForegroundService(serviceIntent);
+            }else{
+                IntervalTaskHandler.getInstance(context).startIntervalTask(1000);
 
-                mediaProjectionManager = (MediaProjectionManager) getContext().getSystemService(Context.MEDIA_PROJECTION_SERVICE);
-
-                if (mediaProjectionManager != null) {
-                    Intent captureIntent = mediaProjectionManager.createScreenCaptureIntent();
-                    screenCaptureLauncher.launch(captureIntent);
-
-                    NAVIGATE_GCASH_CIBD = call.getCallbackId();
-                    bridge.saveCall(call);
-                } else {
-                    throw new AutoPayException(AutoPayErrorCodes.MEDIA_PROJECTION_FAILED_TO_INITIALIZE_ERROR);
-                }
+                JSObject ret = new JSObject();
+                ret.put("value", true);
+                call.resolve(ret);
             }
         }catch (AutoPayException e){
             call.reject(e.getLocalizedMessage(), e.getErrorCode());
@@ -239,10 +176,6 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
     @Override
     protected  void handleOnDestroy(){
         super.handleOnDestroy();
-
-        if(mediaProjectionHandler != null){
-            mediaProjectionHandler.stopMediaProjection();
-        }
     }
 
     private boolean isAccessibilityServiceEnabled(Context context){
@@ -259,9 +192,6 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
     @Override
     public void onCompleted() {
         Log.d(TAG, "STOP NAVIGATION");
-        if(mediaProjectionHandler != null){
-            mediaProjectionHandler.stopMediaProjection();
-        }
     }
 
     @Override
@@ -278,4 +208,5 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
 
         notifyListeners("error", ret);
     }
+
 }

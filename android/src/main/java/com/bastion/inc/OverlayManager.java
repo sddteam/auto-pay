@@ -33,6 +33,7 @@ public class OverlayManager {
     private final Handler mainHandler;
     private final MediaProjectionHandler mediaProjectionHandler;
     private BoundingBoxView boundingBoxView;
+    private BoundingBoxView boundingBoxView1;
 
 
     public OverlayManager(Context context){
@@ -59,16 +60,23 @@ public class OverlayManager {
 
 
     public void showWhiteOverlay(){
+        if (whiteOverlayView != null){
+            return;
+        }
         mainHandler.post(() -> {
             try{
                 LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
                 whiteOverlayView = inflater.inflate(R.layout.white_overlay, null);
 
+                ImageView overlayOmnibusinessLogo = whiteOverlayView.findViewById(R.id.overlay_omnibusiness_logo);
+                overlayOmnibusinessLogo.setImageBitmap(getImage("OPI-Logo-AutoPay.jpg"));
+
                 WindowManager.LayoutParams params = new WindowManager.LayoutParams(
                         WindowManager.LayoutParams.MATCH_PARENT,
                         WindowManager.LayoutParams.MATCH_PARENT,
                         WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                         WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                                | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                         PixelFormat.TRANSLUCENT
                 );
 
@@ -136,7 +144,11 @@ public class OverlayManager {
     }
 
     public void drawBoundingBox(Rect bounds){
-        BoundingBoxView boundingBoxView1 = new BoundingBoxView(context, bounds);
+        if(boundingBoxView1 != null){
+            windowManager.removeView(boundingBoxView1);
+        }
+
+        boundingBoxView1 = new BoundingBoxView(context, bounds);
         WindowManager.LayoutParams params = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.MATCH_PARENT,
@@ -175,4 +187,14 @@ public class OverlayManager {
             }
         });
     }
+
+    public void removeWhiteOverlay(){
+        mainHandler.post(() -> {
+           if(whiteOverlayView != null){
+               windowManager.removeView(whiteOverlayView);
+               whiteOverlayView = null;
+           }
+        });
+    }
+
 }

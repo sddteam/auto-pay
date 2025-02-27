@@ -86,9 +86,9 @@ public class MediaProjectionHandler {
             );
 
             imageReader.setOnImageAvailableListener(reader -> {
-                if (isProcessingImage) {
+               /* if (isProcessingImage) {
                     return; // Skip if the previous image is still being processed
-                }
+                }*/
                 Image image = null;
                 try{
                     isProcessingImage = true;
