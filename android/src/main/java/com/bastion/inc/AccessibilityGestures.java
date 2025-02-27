@@ -36,11 +36,14 @@ public class AccessibilityGestures implements GestureService {
         put("SEP", 9); put("OCT", 10); put("NOV", 11); put("DEC", 12);
     }};
 
+    private OverlayManager overlayManager;
+
     public AccessibilityGestures(Context context){
         this.context = context;
+        this.overlayManager = OverlayManager.getInstance(context);
     }
     @Override
-    public void click(Location location, int times, ActionState state) {
+    public void click(Location location, int times) {
         if(location == null){
             return;
         }
@@ -91,6 +94,8 @@ public class AccessibilityGestures implements GestureService {
         if(buttons != null && !buttons.isEmpty()){
             for (AccessibilityNodeInfo button :
                     buttons) {
+
+
                 if(button.isClickable()){
                     button.performAction(AccessibilityNodeInfo.ACTION_CLICK);
 
@@ -103,6 +108,24 @@ public class AccessibilityGestures implements GestureService {
                     }*/
 
                     return;
+                }else{
+                    AccessibilityNodeInfo parent = button.getParent();
+                    if(parent != null){
+                        parent.performAction(AccessibilityNodeInfo.ACTION_FOCUS);
+                        parent.performAction(AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS);
+                        parent.performAction(AccessibilityNodeInfo.ACTION_SELECT);
+                        parent.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                    }
+
+
+                    /*int statusBarHeight = getStatusBarHeight(context);
+                    Rect bounds = new Rect();
+                    button.getBoundsInScreen(bounds);
+
+                    bounds.top -= statusBarHeight;
+                    bounds.bottom -= statusBarHeight;
+
+                    click(getLocation(bounds));*/
                 }
             }
         }
@@ -129,6 +152,10 @@ public class AccessibilityGestures implements GestureService {
 
 
         waitFor(GESTURE_CLICK_WAIT_TIME);
+    }
+
+    private Location getLocation(Rect rect){
+        return new Location(rect.centerX(), rect.centerY());
     }
 
     @Override
@@ -178,6 +205,9 @@ public class AccessibilityGestures implements GestureService {
             findByText(rootNodeInfo, filename);
         }
 
+        OverlayManager overlayManager = OverlayManager.getInstance(context);
+        overlayManager.removeWhiteOverlay();
+
         waitFor(GESTURE_CLICK_WAIT_TIME);
     }
 
@@ -201,10 +231,106 @@ public class AccessibilityGestures implements GestureService {
             }
         }
     }
+    
+    private List<AccessibilityNodeInfo> getNodeByText(String text){
+        AccessibilityNodeInfo rootNodeInfo  = AutoPayAccessibilityService.getInstance().getRootInActiveWindow();
+
+        List<AccessibilityNodeInfo> allNodes = new ArrayList<>();
+        List<AccessibilityNodeInfo> foundNodes = new ArrayList<>();
+
+        getAllNodesRecursive(rootNodeInfo, allNodes);
+
+        for (AccessibilityNodeInfo node :
+                allNodes) {
+            String name = node.getText() != null ? node.getText().toString() : "";
+
+            if(name.equals(text)){
+                foundNodes.add(node);
+            }
+        }
+
+        return foundNodes;
+    }
 
     @Override
     public void close() throws Exception {
 
+    }
+
+    public ActionState checkState(){
+        AccessibilityNodeInfo rootNodeInfo  = AutoPayAccessibilityService.getInstance().getRootInActiveWindow();
+        if(rootNodeInfo == null){
+            return ActionState.UNKNOWN;
+        }
+
+        List<AccessibilityNodeInfo> allNodes = new ArrayList<>();
+        getAllNodesRecursive(rootNodeInfo, allNodes);
+
+        //drawBoundingBox(allNodes);
+
+        List<AccessibilityNodeInfo> loginNode = rootNodeInfo.findAccessibilityNodeInfosByText("Enter your MPIN");
+        List<AccessibilityNodeInfo> homeNode = rootNodeInfo.findAccessibilityNodeInfosByText("Bills");
+        List<AccessibilityNodeInfo> uploadNode = rootNodeInfo.findAccessibilityNodeInfosByText("Upload QR");
+        List<AccessibilityNodeInfo> selectNode = rootNodeInfo.findAccessibilityNodeInfosByText("Recent");
+        List<AccessibilityNodeInfo> paymentNode = getNodeByText("Amount Due");
+        List<AccessibilityNodeInfo> adsNode = getNodeByText("Remind me later");
+
+        if(!loginNode.isEmpty()){
+            return ActionState.LOGIN;
+        } else if (!homeNode.isEmpty()) {
+            return ActionState.HOME;
+        } else if (!uploadNode.isEmpty()) {
+            return ActionState.UPLOAD_QR;
+        } else if (!selectNode.isEmpty()) {
+            return ActionState.SELECT_QR;
+        } else if (!paymentNode.isEmpty()) {
+            return ActionState.PAYMENT;
+        } else if (!adsNode.isEmpty()) {
+            return ActionState.ADS;
+        } else {
+            return ActionState.UNKNOWN;
+        }
+
+       /* if(allNodes.size() >= 60){
+            return ActionState.HOME;
+        } else if (allNodes.size() == 31) {
+            return ActionState.SELECT_QR;
+        } else if (allNodes.size() == 28) {
+            return ActionState.LOGIN;
+        } else if (allNodes.size() >= 17) {
+            return ActionState.UPLOAD_QR;
+        }else{
+            return ActionState.UNKNOWN;
+        }*/
+    }
+
+    private void drawBoundingBox(List<AccessibilityNodeInfo> nodes){
+        List<Rect> boundsList = new ArrayList<>();
+        int statusBarHeight = getStatusBarHeight(context);
+
+        for (AccessibilityNodeInfo node :
+                nodes) {
+            Rect bounds = new Rect();
+            node.getBoundsInScreen(bounds);
+
+            bounds.top -= statusBarHeight;
+            bounds.bottom -= statusBarHeight;
+
+            if (bounds.width() > 0 && bounds.height() > 0) {
+                boundsList.add(bounds);
+            }
+        }
+
+        overlayManager.drawMultipleBoundingBox(boundsList);
+    }
+
+    private int getStatusBarHeight(Context context) {
+        int statusBarHeight = 0;
+        int resourceId = context.getResources().getIdentifier("status_bar_height", "dimen", "android");
+        if (resourceId > 0) {
+            statusBarHeight = context.getResources().getDimensionPixelSize(resourceId);
+        }
+        return statusBarHeight;
     }
 
     private void waitFor(long waitTime) {

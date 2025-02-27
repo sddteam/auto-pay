@@ -31,6 +31,8 @@ public class BoundingBoxView extends View {
         if(singleRect != null){
             this.boundsList.add(singleRect);
         }
+
+        paint = createPaint();
     }
 
     @Override

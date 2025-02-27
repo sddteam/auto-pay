@@ -5,5 +5,7 @@ public enum ActionState {
     HOME,
     UPLOAD_QR,
     SELECT_QR,
-    PAYMENT
+    PAYMENT,
+    UNKNOWN,
+    ADS
 }

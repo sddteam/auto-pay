@@ -137,24 +137,26 @@ public class OpenCVHandler implements ProjectionImageListener {
             return; // Skip this frame
         }
 
-        String currentFrameHash = calculateBitmapHash(bitmap);
+        /*String currentFrameHash = calculateBitmapHash(bitmap);
 
         if(currentFrameHash.equals(previousFrameHash.get())){
             recycleBitmap(bitmap);
             return;
-        }
+        }*/
 
         //Ads monitoring
-        accessibilityGestures.ads();
+        //accessibilityGestures.ads();
 
         isProcessing.set(true);
-        previousFrameHash.set(currentFrameHash);
+        //previousFrameHash.set(currentFrameHash);
 
         executorService.submit(() -> {
             try{
                 Mat screenMat = convertBitmapToMat(bitmap);
 
+
                 MatchResult matchResult = findBestMatch(screenMat, 0.1);
+                Log.d(TAG, String.valueOf(matchResult.templateName));
                 tapBestMatch(matchResult, screenMat, MAX_CLICK);
 
             }catch (Exception e){
@@ -223,7 +225,9 @@ public class OpenCVHandler implements ProjectionImageListener {
             accessibilityGestures.click(findButtonLocation(
                     preloadedButtonTemplates.get("uploadQRButton"),
                     screenMat
-            ), matchResult.templateName);
+            ));
+
+            overlayManager.showWhiteOverlay();
         }
         if(matchResult.templateName.equals(ActionState.SELECT_QR)){
             currentState = ActionState.SELECT_QR;
@@ -274,7 +278,7 @@ public class OpenCVHandler implements ProjectionImageListener {
                 bestMatchPoint = bestMatchPointFromState;
             }
 
-            Log.d(TAG, "CONFIDENCE: " + bestMatchScoreFromState + " STATE: "+ entry.getKey());
+            //Log.d(TAG, "CONFIDENCE: " + bestMatchScoreFromState + " STATE: "+ entry.getKey());
         }
 
         if(bestMatchScore >= threshold){

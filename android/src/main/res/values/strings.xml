@@ -4,4 +4,6 @@
     <string name="omnipay_business_logo">Omnipay Business Logo</string>
     <string name="stop_auto_pay">Stop auto-pay</string>
     <string name="accessibility_service_description">My Accessibility Service allows automated interactions for enhanced usability.</string>
+    <string name="overlay_text_please_wait">Processing your payment automatically… Hang tight!</string>
+    <string name="overlay_text_warning">This won’t take long. Just keep the app open and we’ll do the rest.</string>
 </resources>
