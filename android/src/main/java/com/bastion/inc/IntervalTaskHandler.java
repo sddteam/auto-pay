@@ -2,10 +2,14 @@ package com.bastion.inc;
 
 import android.app.Notification;
 import android.content.Context;
+import android.net.Uri;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.concurrent.Executors;
@@ -54,12 +58,14 @@ public class IntervalTaskHandler {
               } else if (state == ActionState.UPLOAD_QR){
                   accessibilityGestures.find("Upload QR");
               } else if (state == ActionState.SELECT_QR) {
-                  String currentDate = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
-                  String fileName = "qr_code_" + currentDate + ".png";
-                  accessibilityGestures.qr(fileName);
+                  String filename = generateQRFilename();
+                  accessibilityGestures.qr(filename);
               } else if (state == ActionState.PAYMENT) {
                   overlayManager.removeWhiteOverlay();
-                  stopIntervalTask();
+
+                  //TODO: REMOVE QR IMAGE
+                  String filename = generateQRFilename();
+                  deleteFile(filename);
               } else if (state == ActionState.ADS) {
                   accessibilityGestures.find("Remind me later");
               }
@@ -75,4 +81,28 @@ public class IntervalTaskHandler {
         }
     }
 
+    private String generateQRFilename(){
+        String currentDate = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
+        return "qr_code_" + currentDate + ".png";
+    }
+
+    private void deleteFile(String filename){
+        try{
+            File documentsDir = new File(context.getFilesDir(), "Documents");
+            File qrFile = new File(documentsDir, filename);
+
+            if(qrFile.exists()){
+                boolean deleted = qrFile.delete();
+                if(deleted){
+                    Log.d(TAG, "QR file deleted: " + filename);
+                }else{
+                    Log.d(TAG, "Failed to delete QR file: " + filename);
+                }
+            }else{
+                Log.d(TAG, "QR file not found: "+ filename);
+            }
+        }catch (Exception e){
+            Log.e(TAG, "Error deleting QR file: " + e.getMessage());
+        }
+    }
 }

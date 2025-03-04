@@ -176,6 +176,8 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
     @Override
     protected  void handleOnDestroy(){
         super.handleOnDestroy();
+
+        IntervalTaskHandler.getInstance(getContext().getApplicationContext()).stopIntervalTask();
     }
 
     private boolean isAccessibilityServiceEnabled(Context context){
@@ -192,6 +194,8 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
     @Override
     public void onCompleted() {
         Log.d(TAG, "STOP NAVIGATION");
+
+        IntervalTaskHandler.getInstance(getContext().getApplicationContext()).stopIntervalTask();
     }
 
     @Override
