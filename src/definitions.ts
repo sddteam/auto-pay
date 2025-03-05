@@ -18,4 +18,5 @@ export interface AutoPayPlugin {
     listenerFunc: (data: { message: string }) => void
   ): Promise<PluginListenerHandle>;
   removeAllListeners(): Promise<void>;
+  startAutoPay(options: any): Promise<any>;
 }

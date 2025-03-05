@@ -63,6 +63,9 @@ export class AutoPayWeb extends WebPlugin implements AutoPayPlugin {
       }
     });
   }
+  startAutoPay(options: any): Promise<any>{
+    return options;
+  }
   navigateGCash(options: any): Promise<any> {
     return options;
   }

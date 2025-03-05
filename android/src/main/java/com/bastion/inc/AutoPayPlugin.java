@@ -10,6 +10,7 @@ import com.getcapacitor.Bridge;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.media.projection.MediaProjectionManager;
 import android.net.Uri;
 import android.provider.Settings;
@@ -46,6 +47,32 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
         JSObject ret = new JSObject();
         ret.put("value", implementation.echo(value));
         call.resolve(ret);
+    }
+    @PluginMethod
+    public void startAutoPay(PluginCall call){
+        String url = call.getString("url");
+        JSObject ret = new JSObject();
+
+        if(openApp(url)){
+            try {
+                Context context = getContext();
+
+                if(!isAccessibilityServiceEnabled(context)){
+                    throw new AutoPayException(AutoPayErrorCodes.ACCESSIBILITY_SERVICE_NOT_ENABLED_ERROR);
+                } else if (!Settings.canDrawOverlays(context)) {
+                    throw new AutoPayException(AutoPayErrorCodes.OVERLAY_PERMISSION_NOT_ENABLED_ERROR);
+                }else{
+                    IntervalTaskHandler.getInstance(context).startIntervalTask(1000);
+
+                    ret.put("value", true);
+                    call.resolve(ret);
+                }
+            }catch (AutoPayException e){
+                call.reject(e.getLocalizedMessage(), e.getErrorCode());
+            }catch (Exception e){
+                call.reject(e.getLocalizedMessage(), null, e);
+            }
+        }
     }
     @PluginMethod
     public void stopNavigation(PluginCall call){
@@ -213,4 +240,42 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
         notifyListeners("error", ret);
     }
 
+    private boolean canOpenApp(String packageName){
+        Context ctx = getContext().getApplicationContext();
+        final PackageManager pm = ctx.getPackageManager();
+
+        try{
+            pm.getPackageInfo(packageName, PackageManager.GET_ACTIVITIES);
+            return true;
+        }catch (Exception e){
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    private boolean openApp(String packageName){
+        if(!canOpenApp(packageName)){
+            return false;
+        }
+
+        final PackageManager manager = getContext().getPackageManager();
+        Intent launchIntent = new Intent(Intent.ACTION_VIEW);
+        launchIntent.setData(Uri.parse(packageName));
+        launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+        try{
+            getActivity().startActivity(launchIntent);
+            return true;
+        }catch (Exception e){
+            e.printStackTrace();
+            launchIntent = manager.getLaunchIntentForPackage(packageName);
+            try{
+                getActivity().startActivity(launchIntent);
+                return true;
+            }catch (Exception epgk){
+              epgk.printStackTrace();
+              return false;
+            }
+        }
+    }
 }
