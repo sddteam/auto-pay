@@ -164,6 +164,22 @@
         "docs": "",
         "complexTypes": [],
         "slug": "removealllisteners"
+      },
+      {
+        "name": "startAutoPay",
+        "signature": "(options: any) => Promise<any>",
+        "parameters": [
+          {
+            "name": "options",
+            "docs": "",
+            "type": "any"
+          }
+        ],
+        "returns": "Promise<any>",
+        "tags": [],
+        "docs": "",
+        "complexTypes": [],
+        "slug": "startautopay"
       }
     ],
     "properties": []

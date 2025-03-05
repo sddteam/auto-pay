@@ -71,6 +71,9 @@ var capacitorAutoPay = (function (exports, core) {
                 }
             });
         }
+        startAutoPay(options) {
+            return options;
+        }
         navigateGCash(options) {
             return options;
         }

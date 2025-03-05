@@ -65,6 +65,9 @@ export class AutoPayWeb extends WebPlugin {
             }
         });
     }
+    startAutoPay(options) {
+        return options;
+    }
     navigateGCash(options) {
         return options;
     }

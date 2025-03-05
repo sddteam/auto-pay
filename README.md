@@ -24,6 +24,7 @@ npx cap sync
 * [`addListener('warning', ...)`](#addlistenerwarning-)
 * [`addListener('error', ...)`](#addlistenererror-)
 * [`removeAllListeners()`](#removealllisteners)
+* [`startAutoPay(...)`](#startautopay)
 * [Interfaces](#interfaces)
 
 </docgen-index>
@@ -172,6 +173,21 @@ addListener(eventName: 'error', listenerFunc: (data: { message: string; }) => vo
 ```typescript
 removeAllListeners() => Promise<void>
 ```
+
+--------------------
+
+
+### startAutoPay(...)
+
+```typescript
+startAutoPay(options: any) => Promise<any>
+```
+
+| Param         | Type             |
+| ------------- | ---------------- |
+| **`options`** | <code>any</code> |
+
+**Returns:** <code>Promise&lt;any&gt;</code>
 
 --------------------
 

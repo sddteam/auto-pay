@@ -10,6 +10,7 @@ export declare class AutoPayWeb extends WebPlugin implements AutoPayPlugin {
         x: number;
         y: number;
     }): Promise<any>;
+    startAutoPay(options: any): Promise<any>;
     navigateGCash(options: any): Promise<any>;
     echo(options: {
         value: string;

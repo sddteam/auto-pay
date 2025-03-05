@@ -72,6 +72,9 @@ class AutoPayWeb extends core.WebPlugin {
             }
         });
     }
+    startAutoPay(options) {
+        return options;
+    }
     navigateGCash(options) {
         return options;
     }
