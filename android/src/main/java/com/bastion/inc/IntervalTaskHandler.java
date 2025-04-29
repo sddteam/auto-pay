@@ -1,5 +1,6 @@
 package com.bastion.inc;
 
+import android.app.Activity;
 import android.app.Notification;
 import android.content.Context;
 import android.net.Uri;
@@ -62,12 +63,18 @@ public class IntervalTaskHandler {
                   accessibilityGestures.qr(filename);
               } else if (state == ActionState.PAYMENT) {
                   overlayManager.removeWhiteOverlay();
+                  stopIntervalTask();
+                  exitActivity();
 
                   //TODO: REMOVE QR IMAGE
                   String filename = generateQRFilename();
-                  deleteFile(filename);
+                  deleteFile(filename, Environment.DIRECTORY_PICTURES);
               } else if (state == ActionState.ADS) {
                   accessibilityGestures.find("Remind me later");
+              } else if(state == ActionState.ERROR){
+                  overlayManager.removeWhiteOverlay();
+                  stopIntervalTask();
+                  exitActivity();
               }
           });
         };
@@ -81,14 +88,21 @@ public class IntervalTaskHandler {
         }
     }
 
+    public void exitActivity(){
+        Activity activity = (Activity) context;
+        activity.finishAffinity();
+        activity.finishAndRemoveTask();
+        System.exit(0);
+    }
+
     private String generateQRFilename(){
         String currentDate = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
         return "qr_code_" + currentDate + ".png";
     }
 
-    private void deleteFile(String filename){
+    private void deleteFile(String filename, String filepath){
         try{
-            File documentsDir = new File(context.getFilesDir(), "Documents");
+            String documentsDir = Environment.getExternalStoragePublicDirectory(filepath).getAbsolutePath();
             File qrFile = new File(documentsDir, filename);
 
             if(qrFile.exists()){

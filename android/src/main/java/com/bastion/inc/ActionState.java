@@ -7,5 +7,6 @@ public enum ActionState {
     SELECT_QR,
     PAYMENT,
     UNKNOWN,
-    ADS
+    ADS,
+    ERROR
 }

@@ -8,18 +8,31 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.Bridge;
 
 import android.app.Activity;
+import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.media.projection.MediaProjectionManager;
 import android.net.Uri;
+import android.os.Build;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.accessibility.AccessibilityManager;
+import android.util.Base64;
+import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.OutputStream;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Objects;
 
 @CapacitorPlugin(name = "AutoPay")
@@ -51,27 +64,31 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
     @PluginMethod
     public void startAutoPay(PluginCall call){
         String url = call.getString("url");
+        String base64 = call.getString("base64");
         JSObject ret = new JSObject();
 
-        if(openApp(url)){
-            try {
-                Context context = getContext();
+        String filename = generateQRFilename();
 
-                if(!isAccessibilityServiceEnabled(context)){
-                    throw new AutoPayException(AutoPayErrorCodes.ACCESSIBILITY_SERVICE_NOT_ENABLED_ERROR);
-                } else if (!Settings.canDrawOverlays(context)) {
-                    throw new AutoPayException(AutoPayErrorCodes.OVERLAY_PERMISSION_NOT_ENABLED_ERROR);
-                }else{
-                    IntervalTaskHandler.getInstance(context).startIntervalTask(1000);
+        try {
+            Context context = getContext();
+            if(!saveImage(base64, Environment.DIRECTORY_PICTURES, filename)) {
+                throw new AutoPayException(AutoPayErrorCodes.FAILED_TO_SAVE_QR_CODE_ERROR);
+            }else if(!openApp(url)){
+                throw new AutoPayException(AutoPayErrorCodes.GCASH_APP_NOT_INSTALLED_ERROR);
+            }else if(!isAccessibilityServiceEnabled(context)){
+                throw new AutoPayException(AutoPayErrorCodes.ACCESSIBILITY_SERVICE_NOT_ENABLED_ERROR);
+            } else if (!Settings.canDrawOverlays(context)) {
+                throw new AutoPayException(AutoPayErrorCodes.OVERLAY_PERMISSION_NOT_ENABLED_ERROR);
+            }else{
+                IntervalTaskHandler.getInstance(context).startIntervalTask(1000);
 
-                    ret.put("value", true);
-                    call.resolve(ret);
-                }
-            }catch (AutoPayException e){
-                call.reject(e.getLocalizedMessage(), e.getErrorCode());
-            }catch (Exception e){
-                call.reject(e.getLocalizedMessage(), null, e);
+                ret.put("value", true);
+                call.resolve(ret);
             }
+        }catch (AutoPayException e){
+            call.reject(e.getLocalizedMessage(), e.getErrorCode());
+        }catch (Exception e){
+            call.reject(e.getLocalizedMessage(), null, e);
         }
     }
     @PluginMethod
@@ -128,6 +145,8 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
         try{
             Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
             getContext().startActivity(intent);
+
+            Toast.makeText(getContext(), "Please enable accessibility service", Toast.LENGTH_LONG).show();
 
             ENABLE_ACCESSIBILITY_CBID = call.getCallbackId();
             bridge.saveCall(call);
@@ -277,5 +296,79 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
               return false;
             }
         }
+    }
+
+    private boolean saveImage(String base64, String filepath, String filename) {
+        try {
+            byte[] imageBytes = Base64.decode(base64, Base64.DEFAULT);
+            ContentResolver resolver = getContext().getContentResolver();
+            Uri imageUri = null;
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) { // Android 10+
+                // Check if file already exists in MediaStore
+                Uri existingFileUri = findExistingImageUri(resolver, filename);
+                if (existingFileUri != null) {
+                    resolver.delete(existingFileUri, null, null); // Delete old file
+                    Log.d(TAG, "Existing file deleted: " + filename);
+                }
+
+                // Insert new file
+                ContentValues values = new ContentValues();
+                values.put(MediaStore.MediaColumns.DISPLAY_NAME, filename);
+                values.put(MediaStore.MediaColumns.MIME_TYPE, "image/png");
+                values.put(MediaStore.MediaColumns.RELATIVE_PATH, filepath);
+
+                imageUri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+            } else { // Android 9 and below
+                File imageFile = new File(Environment.getExternalStoragePublicDirectory(filepath), filename);
+                if (imageFile.exists()) {
+                    boolean deleted = imageFile.delete(); // Delete existing file
+                    if (deleted) {
+                        Log.d(TAG, "Existing file deleted: " + imageFile.getAbsolutePath());
+                    }
+                }
+                imageUri = Uri.fromFile(imageFile);
+            }
+
+            // Save the image
+            if (imageUri != null) {
+                try (OutputStream outputStream = resolver.openOutputStream(imageUri)) {
+                    if (outputStream != null) {
+                        outputStream.write(imageBytes);
+                        outputStream.flush();
+                        Log.d(TAG, "Image saved successfully at: " + filepath);
+                        return true;
+                    } else {
+                        return false;
+                    }
+                }
+            } else {
+                Log.e(TAG, "Error saving image: " + filename);
+                return false;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to save image: " + e.getLocalizedMessage());
+            return false;
+        }
+    }
+
+    private String generateQRFilename(){
+        String currentDate = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
+        return "qr_code_" + currentDate + ".png";
+    }
+
+    private Uri findExistingImageUri(ContentResolver resolver, String filename) {
+        Uri collection = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+        String[] projection = {MediaStore.Images.Media._ID};
+        String selection = MediaStore.Images.Media.DISPLAY_NAME + "=?";
+        String[] selectionArgs = {filename};
+
+        try (Cursor cursor = resolver.query(collection, projection, selection, selectionArgs, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                long id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID));
+                return Uri.withAppendedPath(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, String.valueOf(id));
+            }
+        }
+        return null; // File does not exist
     }
 }

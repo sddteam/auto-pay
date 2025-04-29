@@ -223,7 +223,7 @@ public class AccessibilityGestures implements GestureService {
             }
         }
     }
-    
+
     private List<AccessibilityNodeInfo> getNodeByText(String text){
         AccessibilityNodeInfo rootNodeInfo  = AutoPayAccessibilityService.getInstance().getRootInActiveWindow();
 
@@ -266,6 +266,7 @@ public class AccessibilityGestures implements GestureService {
         List<AccessibilityNodeInfo> selectNode = rootNodeInfo.findAccessibilityNodeInfosByText("Recent");
         List<AccessibilityNodeInfo> paymentNode = getNodeByText("Amount Due");
         List<AccessibilityNodeInfo> adsNode = getNodeByText("Remind me later");
+        List<AccessibilityNodeInfo> errorNode = getNodeByText("Please make sure code is clear.");
 
         if(!loginNode.isEmpty()){
             return ActionState.LOGIN;
@@ -279,6 +280,8 @@ public class AccessibilityGestures implements GestureService {
             return ActionState.PAYMENT;
         } else if (!adsNode.isEmpty()) {
             return ActionState.ADS;
+        } else if (!errorNode.isEmpty()) {
+          return ActionState.ERROR;
         } else {
             return ActionState.UNKNOWN;
         }
