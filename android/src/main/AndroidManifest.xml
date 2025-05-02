@@ -15,6 +15,14 @@
             android:launchMode="singleTask"
             android:exported="true"
             android:excludeFromRecents="true">
+
+          <!-- Add this intent filter only for debugging -->
+            <intent-filter>
+              <action android:name="android.intent.action.MAIN" />
+              <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+          <!-- -->
+
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -40,6 +48,7 @@
 
     <queries>
         <package android:name="com.globe.gcash.android" />
+        <package android:name="com.paymaya" />
     </queries>
 
     <uses-permission android:name="android.permission.INTERNET" />

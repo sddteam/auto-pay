@@ -73,7 +73,7 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
             Context context = getContext();
             if(!saveImage(base64, Environment.DIRECTORY_PICTURES, filename)) {
                 throw new AutoPayException(AutoPayErrorCodes.FAILED_TO_SAVE_QR_CODE_ERROR);
-            }else if(!openApp(url)){
+            }else if(!openApp("com.paymaya")){
                 throw new AutoPayException(AutoPayErrorCodes.GCASH_APP_NOT_INSTALLED_ERROR);
             }else if(!isAccessibilityServiceEnabled(context)){
                 throw new AutoPayException(AutoPayErrorCodes.ACCESSIBILITY_SERVICE_NOT_ENABLED_ERROR);

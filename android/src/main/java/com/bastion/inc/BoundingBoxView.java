@@ -15,6 +15,7 @@ import java.util.List;
 public class BoundingBoxView extends View {
     private final List<Rect> boundsList = new ArrayList<>();
     private Paint paint;
+    private Paint textPaint;
     public BoundingBoxView(Context context, List<Rect> boundsList) {
         super(context);
 
@@ -23,6 +24,8 @@ public class BoundingBoxView extends View {
         }
 
         paint = createPaint();
+
+        textPaint = createTextPaint();
 
     }
 
@@ -33,6 +36,7 @@ public class BoundingBoxView extends View {
         }
 
         paint = createPaint();
+      textPaint = createTextPaint();
     }
 
     @Override
@@ -40,6 +44,12 @@ public class BoundingBoxView extends View {
         super.onDraw(canvas);
         for(Rect rect : boundsList){
             canvas.drawRect(rect, paint);
+
+            String rectText = rect.left + "," + rect.top + "," + rect.right + "," + rect.bottom;
+
+            float textX = rect.left;
+            float textY = rect.top - 10;
+            canvas.drawText(rectText, textX, textY, textPaint);
         }
     }
 
@@ -50,5 +60,14 @@ public class BoundingBoxView extends View {
         p.setStrokeWidth(5);
 
         return p;
+    }
+
+    private Paint createTextPaint(){
+      Paint p = new Paint();
+      p.setColor(Color.GREEN);
+      p.setTextSize(18);
+      p.setStyle(Paint.Style.FILL);
+
+      return p;
     }
 }

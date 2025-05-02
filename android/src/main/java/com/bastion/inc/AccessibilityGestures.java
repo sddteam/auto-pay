@@ -183,16 +183,22 @@ public class AccessibilityGestures implements GestureService {
         List<Map.Entry<LocalDateTime, AccessibilityNodeInfo>> allNodes = new ArrayList<>();
         getAllDatesRecursive(rootNodeInfo, allNodes);
 
+        List<AccessibilityNodeInfo> nodes = new ArrayList<>();
+        getAllNodesRecursive(rootNodeInfo, nodes);
 
         if(!allNodes.isEmpty()){
             allNodes.stream()
-                    .max(Map.Entry.comparingByKey()).ifPresent(latestNode -> {
-                        AccessibilityNodeInfo node = latestNode.getValue();
-                        if(node != null){
-                            node.performAction(AccessibilityNodeInfo.ACTION_FOCUS);
-                            node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-                        }
-                    });
+                .max(Map.Entry.comparingByKey()).ifPresent(latestNode -> {
+                    AccessibilityNodeInfo node = latestNode.getValue();
+                if (node != null) {
+                  if (!tryClick(node)) {
+                    AccessibilityNodeInfo parent = node.getParent();
+                    while (parent != null && !tryClick(parent)) {
+                      parent = parent.getParent(); // Move up the hierarchy
+                    }
+                  }
+                }
+              });
         }else{
             findByText(rootNodeInfo, filename);
         }
@@ -203,7 +209,12 @@ public class AccessibilityGestures implements GestureService {
         waitFor(GESTURE_CLICK_WAIT_TIME);
     }
 
-    private void findByText(AccessibilityNodeInfo rootNodeInfo, String text){
+    private boolean tryClick(AccessibilityNodeInfo node) {
+      return node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+    }
+
+
+  private void findByText(AccessibilityNodeInfo rootNodeInfo, String text){
         List<AccessibilityNodeInfo> fileNodes = rootNodeInfo.findAccessibilityNodeInfosByText(text);
         if(fileNodes == null || fileNodes.isEmpty()){
             return;
@@ -263,7 +274,7 @@ public class AccessibilityGestures implements GestureService {
         List<AccessibilityNodeInfo> loginNode = rootNodeInfo.findAccessibilityNodeInfosByText("Enter your MPIN");
         List<AccessibilityNodeInfo> homeNode = rootNodeInfo.findAccessibilityNodeInfosByText("Bills");
         List<AccessibilityNodeInfo> uploadNode = rootNodeInfo.findAccessibilityNodeInfosByText("Upload QR");
-        List<AccessibilityNodeInfo> selectNode = rootNodeInfo.findAccessibilityNodeInfosByText("Recent");
+        List<AccessibilityNodeInfo> selectNode = getNodeByText("Photos");
         List<AccessibilityNodeInfo> paymentNode = getNodeByText("Amount Due");
         List<AccessibilityNodeInfo> adsNode = getNodeByText("Remind me later");
         List<AccessibilityNodeInfo> errorNode = getNodeByText("Please make sure code is clear.");
@@ -297,6 +308,39 @@ public class AccessibilityGestures implements GestureService {
         }else{
             return ActionState.UNKNOWN;
         }*/
+    }
+
+    public ActionState mayaState(){
+      AccessibilityNodeInfo rootNodeInfo  = AutoPayAccessibilityService.getInstance().getRootInActiveWindow();
+      if(rootNodeInfo == null){
+        return ActionState.UNKNOWN;
+      }
+
+      List<AccessibilityNodeInfo> allNodes = new ArrayList<>();
+      getAllNodesRecursive(rootNodeInfo, allNodes);
+
+      //drawBoundingBox(allNodes);
+
+      List<AccessibilityNodeInfo> homeNode = getNodeByText("Wallet");
+      List<AccessibilityNodeInfo> servicesNode = getNodeByText("Services");
+      List<AccessibilityNodeInfo> uploadNode = getNodeByText("Scan a QR code");
+      List<AccessibilityNodeInfo> selectNode = getNodeByText("Photos");
+      List<AccessibilityNodeInfo> paymentNode = getNodeByText("My Wallet");
+
+      if (!homeNode.isEmpty()) {
+        return ActionState.HOME;
+      } else if (!servicesNode.isEmpty()) {
+        return ActionState.SERVICES;
+      } else if (!uploadNode.isEmpty()) {
+        return ActionState.UPLOAD_QR;
+      } else if (!selectNode.isEmpty()) {
+        return ActionState.SELECT_QR;
+      } else if (!paymentNode.isEmpty()) {
+        return ActionState.PAYMENT;
+      } else {
+        return ActionState.UNKNOWN;
+      }
+
     }
 
     private void drawBoundingBox(List<AccessibilityNodeInfo> nodes){
@@ -377,7 +421,7 @@ public class AccessibilityGestures implements GestureService {
         text = text.replaceAll("[\u00A0\u202F\u200B]", " ");
 
         // Patterns for both formats
-        String regex1 = "Photo taken on (\\w{3}) (\\d{1,2}), (\\d{4}), (\\d{1,2}):(\\d{2}):(\\d{2}) ?(AM|PM)";
+        String regex1 = "Photo taken on (\\w{3}) (\\d{1,2}), (\\d{4}) (\\d{1,2}):(\\d{2}) ?(AM|PM)";
         String regex2 = "Photo taken on (\\d{1,2}) (\\w{3}) (\\d{4}), (\\d{1,2}):(\\d{2}):(\\d{2}) ?(am|pm)";
 
         Pattern pattern1 = Pattern.compile(regex1);
@@ -404,8 +448,7 @@ public class AccessibilityGestures implements GestureService {
         int year = Integer.parseInt(matcher.group(3));
         int hour = Integer.parseInt(matcher.group(4));
         int minute = Integer.parseInt(matcher.group(5));
-        int second = Integer.parseInt(matcher.group(6));
-        String amPm = matcher.group(7);
+        String amPm = matcher.group(6);
 
         int monthNumber = MONTH_ABBREVIATIONS.get(monthAbbrev);
 
@@ -416,7 +459,7 @@ public class AccessibilityGestures implements GestureService {
             hour = 0;
         }
 
-        return LocalDateTime.of(year, monthNumber, day, hour, minute, second);
+        return LocalDateTime.of(year, monthNumber, day, hour, minute);
     }
 
     private void performGesture(GestureDescription.StrokeDescription strokeDescription){

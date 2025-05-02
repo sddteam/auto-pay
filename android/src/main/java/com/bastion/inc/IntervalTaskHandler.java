@@ -50,34 +50,68 @@ public class IntervalTaskHandler {
 
         task = () -> {
           mainHandler.post(() -> {
-              ActionState state = accessibilityGestures.checkState();
-              Log.d(TAG, "Task executed at: " + System.currentTimeMillis() + " State: " + state);
+            ActionState state = accessibilityGestures.mayaState();
+            Log.d(TAG, "Task executed at: " + System.currentTimeMillis() + " State: " + state);
 
-              if(state == ActionState.HOME) {
-                  overlayManager.showWhiteOverlay();
-                  mainHandler.postDelayed(() -> accessibilityGestures.find("QR"), 1000);
-              } else if (state == ActionState.UPLOAD_QR){
-                  accessibilityGestures.find("Upload QR");
-              } else if (state == ActionState.SELECT_QR) {
-                  String filename = generateQRFilename();
-                  accessibilityGestures.qr(filename);
-              } else if (state == ActionState.PAYMENT) {
-                  overlayManager.removeWhiteOverlay();
-                  stopIntervalTask();
-                  exitActivity();
+            if(state == ActionState.HOME) {
+              overlayManager.showWhiteOverlay();
+              mainHandler.postDelayed(() -> accessibilityGestures.find("More"), 1000);
+            } else if (state == ActionState.SERVICES){
+              accessibilityGestures.find("Pay with QR");
+            } else if (state == ActionState.UPLOAD_QR){
+              accessibilityGestures.find("Upload QR");
+            } else if (state == ActionState.SELECT_QR) {
+              String filename = generateQRFilename();
+              accessibilityGestures.qr(filename);
+            } else if (state == ActionState.PAYMENT) {
+              Log.d(TAG, "STOP TASK");
+              overlayManager.removeWhiteOverlay();
+              stopIntervalTask();
+              exitActivity();
 
-                  //TODO: REMOVE QR IMAGE
-                  String filename = generateQRFilename();
-                  deleteFile(filename, Environment.DIRECTORY_PICTURES);
-              } else if (state == ActionState.ADS) {
-                  accessibilityGestures.find("Remind me later");
-              } else if(state == ActionState.ERROR){
-                  overlayManager.removeWhiteOverlay();
-                  stopIntervalTask();
-                  exitActivity();
-              }
+              //TODO: REMOVE QR IMAGE
+              String filename = generateQRFilename();
+              deleteFile(filename, Environment.DIRECTORY_PICTURES);
+            } else if (state == ActionState.ADS) {
+              accessibilityGestures.find("Remind me later");
+            } else if(state == ActionState.ERROR){
+              overlayManager.removeWhiteOverlay();
+              stopIntervalTask();
+              exitActivity();
+            }
           });
         };
+
+//        task = () -> {
+//          mainHandler.post(() -> {
+//              ActionState state = accessibilityGestures.checkState();
+//              Log.d(TAG, "Task executed at: " + System.currentTimeMillis() + " State: " + state);
+//
+//              if(state == ActionState.HOME) {
+//                  //overlayManager.showWhiteOverlay();
+//                  mainHandler.postDelayed(() -> accessibilityGestures.find("QR"), 1000);
+//              } else if (state == ActionState.UPLOAD_QR){
+//                  accessibilityGestures.find("Upload QR");
+//              } else if (state == ActionState.SELECT_QR) {
+//                  String filename = generateQRFilename();
+//                  accessibilityGestures.qr(filename);
+//              } else if (state == ActionState.PAYMENT) {
+//                  overlayManager.removeWhiteOverlay();
+//                  stopIntervalTask();
+//                  exitActivity();
+//
+//                  //TODO: REMOVE QR IMAGE
+//                  String filename = generateQRFilename();
+//                  deleteFile(filename, Environment.DIRECTORY_PICTURES);
+//              } else if (state == ActionState.ADS) {
+//                  accessibilityGestures.find("Remind me later");
+//              } else if(state == ActionState.ERROR){
+//                  overlayManager.removeWhiteOverlay();
+//                  stopIntervalTask();
+//                  exitActivity();
+//              }
+//          });
+//        };
 
         scheduler.scheduleWithFixedDelay(task, 0, intervalMillis, TimeUnit.MILLISECONDS);
     }
