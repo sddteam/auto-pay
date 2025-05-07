@@ -35,6 +35,7 @@ public class PayMayaStateDetector extends BaseAppStateDetector{
 
         //drawBoundingBox(allNodes);
 
+        List<AccessibilityNodeInfo> loginNode = getNodeByText("Forgot your password?");
         List<AccessibilityNodeInfo> homeNode = getNodeByText("Wallet");
         List<AccessibilityNodeInfo> servicesNode = getNodeByText("Services");
         List<AccessibilityNodeInfo> uploadNode = getNodeByText("Scan a QR code");
@@ -45,6 +46,8 @@ public class PayMayaStateDetector extends BaseAppStateDetector{
             return ActionState.HOME;
         } else if (!servicesNode.isEmpty()) {
             return ActionState.SERVICES;
+        } else if (!loginNode.isEmpty()) {
+            return ActionState.LOGIN;
         } else if (!uploadNode.isEmpty()) {
             return ActionState.UPLOAD_QR;
         } else if (!selectNode.isEmpty()) {

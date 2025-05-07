@@ -13,10 +13,6 @@ npx cap sync
 
 <docgen-index>
 
-* [`echo(...)`](#echo)
-* [`performGesture(...)`](#performgesture)
-* [`navigateGCash(...)`](#navigategcash)
-* [`stopNavigation(...)`](#stopnavigation)
 * [`checkAccessibility()`](#checkaccessibility)
 * [`enableAccessibility()`](#enableaccessibility)
 * [`checkOverlayPermission()`](#checkoverlaypermission)
@@ -31,66 +27,6 @@ npx cap sync
 
 <docgen-api>
 <!--Update the source file JSDoc comments and rerun docgen to update the docs below-->
-
-### echo(...)
-
-```typescript
-echo(options: { value: string; }) => Promise<{ value: string; }>
-```
-
-| Param         | Type                            |
-| ------------- | ------------------------------- |
-| **`options`** | <code>{ value: string; }</code> |
-
-**Returns:** <code>Promise&lt;{ value: string; }&gt;</code>
-
---------------------
-
-
-### performGesture(...)
-
-```typescript
-performGesture(options: { x: number; y: number; }) => Promise<any>
-```
-
-| Param         | Type                                   |
-| ------------- | -------------------------------------- |
-| **`options`** | <code>{ x: number; y: number; }</code> |
-
-**Returns:** <code>Promise&lt;any&gt;</code>
-
---------------------
-
-
-### navigateGCash(...)
-
-```typescript
-navigateGCash(options: any) => Promise<any>
-```
-
-| Param         | Type             |
-| ------------- | ---------------- |
-| **`options`** | <code>any</code> |
-
-**Returns:** <code>Promise&lt;any&gt;</code>
-
---------------------
-
-
-### stopNavigation(...)
-
-```typescript
-stopNavigation(options: any) => Promise<any>
-```
-
-| Param         | Type             |
-| ------------- | ---------------- |
-| **`options`** | <code>any</code> |
-
-**Returns:** <code>Promise&lt;any&gt;</code>
-
---------------------
-
 
 ### checkAccessibility()
 
@@ -180,12 +116,12 @@ removeAllListeners() => Promise<void>
 ### startAutoPay(...)
 
 ```typescript
-startAutoPay(options: any) => Promise<any>
+startAutoPay(options: PayMateOptions) => Promise<any>
 ```
 
-| Param         | Type             |
-| ------------- | ---------------- |
-| **`options`** | <code>any</code> |
+| Param         | Type                                                      |
+| ------------- | --------------------------------------------------------- |
+| **`options`** | <code><a href="#paymateoptions">PayMateOptions</a></code> |
 
 **Returns:** <code>Promise&lt;any&gt;</code>
 
@@ -200,5 +136,13 @@ startAutoPay(options: any) => Promise<any>
 | Prop         | Type                                      |
 | ------------ | ----------------------------------------- |
 | **`remove`** | <code>() =&gt; Promise&lt;void&gt;</code> |
+
+
+#### PayMateOptions
+
+| Prop         | Type                |
+| ------------ | ------------------- |
+| **`app`**    | <code>string</code> |
+| **`base64`** | <code>string</code> |
 
 </docgen-api>

@@ -1,16 +1,15 @@
 import { PluginListenerHandle } from "@capacitor/core";
+export interface PayMateOptions {
+    app: string;
+    base64: string;
+}
+export declare enum SupportedApps {
+    GCASH = "GCASH",
+    MAYA = "MAYA",
+    METROBANK = "METROBANK",
+    BDO = "BDO"
+}
 export interface AutoPayPlugin {
-    echo(options: {
-        value: string;
-    }): Promise<{
-        value: string;
-    }>;
-    performGesture(options: {
-        x: number;
-        y: number;
-    }): Promise<any>;
-    navigateGCash(options: any): Promise<any>;
-    stopNavigation(options: any): Promise<any>;
     checkAccessibility(): Promise<any>;
     enableAccessibility(): Promise<any>;
     checkOverlayPermission(): Promise<any>;
@@ -22,5 +21,5 @@ export interface AutoPayPlugin {
         message: string;
     }) => void): Promise<PluginListenerHandle>;
     removeAllListeners(): Promise<void>;
-    startAutoPay(options: any): Promise<any>;
+    startAutoPay(options: PayMateOptions): Promise<any>;
 }

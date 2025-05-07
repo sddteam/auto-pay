@@ -8,6 +8,7 @@ import android.util.Log;
 import android.view.accessibility.AccessibilityNodeInfo;
 
 import com.bastion.inc.Enums.ActionState;
+import com.bastion.inc.Enums.SupportedApp;
 import com.bastion.inc.Interfaces.AppStateDetector;
 
 import java.util.concurrent.Executors;
@@ -23,7 +24,7 @@ public class IntervalTaskHandler {
     private Runnable task;
     private final OverlayManager overlayManager;
     private int timeOutCount = 0;
-    private static final int MAX_TIMEOUT_COUNT = 5;
+    private static final int MAX_TIMEOUT_COUNT = 60;
 
     public static synchronized IntervalTaskHandler getInstance(Context context){
         if(instance == null){
@@ -40,7 +41,7 @@ public class IntervalTaskHandler {
         this.overlayManager = OverlayManager.getInstance(context);
     }
 
-    public void startIntervalTask(String paymentGateway, long intervalMillis){
+    public void startIntervalTask(SupportedApp app, long intervalMillis){
         stopIntervalTask();
 
         scheduler = Executors.newScheduledThreadPool(1);
@@ -48,9 +49,24 @@ public class IntervalTaskHandler {
         task = () -> {
           mainHandler.post(() -> {
               AccessibilityNodeInfo rootNodeInfo = AutoPayAccessibilityService.getInstance().getRootInActiveWindow();
-              AppStateDetector detector = AppStateDetectorFactory.getDetector(paymentGateway, context);
+              AppStateDetector detector = AppStateDetectorFactory.getDetector(app, context);
 
               ActionState state  = detector.detectState(rootNodeInfo);
+
+              Log.d(TAG, state.toString());
+
+              if(state == ActionState.UNKNOWN){
+                  timeOutCount++;
+
+                  if(timeOutCount >= MAX_TIMEOUT_COUNT){
+                      stopIntervalTask();
+                      overlayManager.removeWhiteOverlay();
+                      return;
+                  }
+              }else{
+                  timeOutCount = 0;
+              }
+
               detector.handleState(state);
           });
         };

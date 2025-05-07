@@ -271,13 +271,6 @@ public class AccessibilityGestures implements GestureService {
 
     }
 
-    public void checkState(String appName){
-        AccessibilityNodeInfo rootNodeInfo = AutoPayAccessibilityService.getInstance().getRootInActiveWindow();
-        AppStateDetector detector = AppStateDetectorFactory.getDetector(appName, context);
-
-        ActionState state  = detector.detectState(rootNodeInfo);
-        detector.handleState(state);
-    }
     private void drawBoundingBox(List<AccessibilityNodeInfo> nodes){
         List<Rect> boundsList = new ArrayList<>();
         int statusBarHeight = getStatusBarHeight(context);
