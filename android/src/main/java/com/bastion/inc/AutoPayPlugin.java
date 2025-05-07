@@ -9,28 +9,14 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.Bridge;
 
-import android.content.ContentResolver;
-import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.database.Cursor;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Environment;
-import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.Log;
-import android.view.accessibility.AccessibilityManager;
-import android.util.Base64;
 import android.widget.Toast;
 
-import androidx.activity.result.ActivityResultLauncher;
-
-import java.io.File;
-import java.io.OutputStream;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.Objects;
 
 @CapacitorPlugin(name = "AutoPay")
@@ -66,7 +52,7 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
             if(!implementation.saveImage(base64, Environment.DIRECTORY_PICTURES, filename, context)) {
                 throw new AutoPayException(AutoPayErrorCodes.FAILED_TO_SAVE_QR_CODE_ERROR);
             }else if(!implementation.openApp(url, context, getActivity())){
-                throw new AutoPayException(AutoPayErrorCodes.GCASH_APP_NOT_INSTALLED_ERROR);
+                throw new AutoPayException(AutoPayErrorCodes.APP_NOT_INSTALLED_ERROR);
             }else if(!implementation.isAccessibilityServiceEnabled(context)){
                 throw new AutoPayException(AutoPayErrorCodes.ACCESSIBILITY_SERVICE_NOT_ENABLED_ERROR);
             } else if (!Settings.canDrawOverlays(context)) {
@@ -203,8 +189,5 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
 
         notifyListeners("error", ret);
     }
-
-
-
 
 }

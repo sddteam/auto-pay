@@ -3,6 +3,8 @@ import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.AccessibilityServiceInfo;
 import android.accessibilityservice.GestureDescription;
 import android.app.ActivityManager;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Path;
@@ -24,6 +26,9 @@ import java.util.List;
 import java.util.Objects;
 
 public class AutoPayAccessibilityService extends AccessibilityService {
+    public static final String CHANNEL_ID = "paymate_accessibility_service_channel";
+    public static final int NOTIFICATION_ID = 101;
+    private static final String TAG = "PayMateAccessibilityService";
 
     private static AutoPayAccessibilityService instance;
     @Override
@@ -114,5 +119,15 @@ public class AutoPayAccessibilityService extends AccessibilityService {
 
     public static AutoPayAccessibilityService getInstance(){
         return instance;
+    }
+
+    private void createNotificataionChannel(){
+        CharSequence name = "Accessibility Service Channel";
+        String description = "Notifiactions from the accessibility service";
+        int importance = NotificationManager.IMPORTANCE_DEFAULT;
+        NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
+        channel.setDescription(description);
+        NotificationManager notificationManager = getSystemService(NotificationManager.class);
+        notificationManager.createNotificationChannel(channel);
     }
 }

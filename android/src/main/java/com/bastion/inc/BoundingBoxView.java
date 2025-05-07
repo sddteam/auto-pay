@@ -14,8 +14,8 @@ import java.util.List;
 
 public class BoundingBoxView extends View {
     private final List<Rect> boundsList = new ArrayList<>();
-    private Paint paint;
-    private Paint textPaint;
+    private final Paint paint;
+    private final Paint textPaint;
     public BoundingBoxView(Context context, List<Rect> boundsList) {
         super(context);
 
