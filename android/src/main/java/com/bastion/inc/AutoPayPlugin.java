@@ -1,5 +1,6 @@
 package com.bastion.inc;
 
+import com.bastion.inc.Interfaces.ApplicationStateListener;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -7,14 +8,12 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.Bridge;
 
-import android.app.Activity;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
-import android.media.projection.MediaProjectionManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
@@ -26,10 +25,8 @@ import android.util.Base64;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -63,7 +60,13 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
     }
     @PluginMethod
     public void startAutoPay(PluginCall call){
-        String url = call.getString("url");
+        String gateway = call.getString("url");
+        String url = "";
+        if(Objects.equals(gateway, "GCash")){
+          url = "com.globe.gcash.android";
+        }else{
+          url = "com.paymaya";
+        }
         String base64 = call.getString("base64");
         JSObject ret = new JSObject();
 
@@ -73,14 +76,14 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
             Context context = getContext();
             if(!saveImage(base64, Environment.DIRECTORY_PICTURES, filename)) {
                 throw new AutoPayException(AutoPayErrorCodes.FAILED_TO_SAVE_QR_CODE_ERROR);
-            }else if(!openApp("com.paymaya")){
+            }else if(!openApp(url)){
                 throw new AutoPayException(AutoPayErrorCodes.GCASH_APP_NOT_INSTALLED_ERROR);
             }else if(!isAccessibilityServiceEnabled(context)){
                 throw new AutoPayException(AutoPayErrorCodes.ACCESSIBILITY_SERVICE_NOT_ENABLED_ERROR);
             } else if (!Settings.canDrawOverlays(context)) {
                 throw new AutoPayException(AutoPayErrorCodes.OVERLAY_PERMISSION_NOT_ENABLED_ERROR);
             }else{
-                IntervalTaskHandler.getInstance(context).startIntervalTask(1000);
+                IntervalTaskHandler.getInstance(context).startIntervalTask(gateway, 1000);
 
                 ret.put("value", true);
                 call.resolve(ret);
@@ -117,7 +120,6 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
             } else if (!Settings.canDrawOverlays(context)) {
                 throw new AutoPayException(AutoPayErrorCodes.OVERLAY_PERMISSION_NOT_ENABLED_ERROR);
             }else{
-                IntervalTaskHandler.getInstance(context).startIntervalTask(1000);
 
                 JSObject ret = new JSObject();
                 ret.put("value", true);

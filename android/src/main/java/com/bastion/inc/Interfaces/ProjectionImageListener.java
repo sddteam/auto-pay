@@ -1,7 +1,6 @@
-package com.bastion.inc;
+package com.bastion.inc.Interfaces;
 
 import android.graphics.Bitmap;
-import android.media.Image;
 
 public interface ProjectionImageListener {
     void onImage(Bitmap bitmap);

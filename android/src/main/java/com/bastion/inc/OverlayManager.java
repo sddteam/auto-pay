@@ -7,7 +7,6 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.PixelFormat;
 import android.graphics.Rect;
-import android.media.projection.MediaProjectionManager;
 import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
@@ -15,10 +14,11 @@ import android.provider.Settings;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.Window;
 import android.view.WindowManager;
 import android.widget.ImageView;
 import android.widget.TextView;
+
+import com.bastion.inc.OCR.MediaProjectionHandler;
 
 import java.io.InputStream;
 import java.util.List;

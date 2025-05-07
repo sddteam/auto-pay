@@ -1,4 +1,4 @@
-package com.bastion.inc;
+package com.bastion.inc.OCR;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -6,34 +6,11 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
-import android.content.pm.ServiceInfo;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.ImageFormat;
-import android.graphics.PixelFormat;
-import android.hardware.display.DisplayManager;
-import android.hardware.display.VirtualDisplay;
-import android.media.Image;
-import android.media.ImageReader;
-import android.media.projection.MediaProjection;
-import android.media.projection.MediaProjectionManager;
-import android.os.Build;
-import android.os.Handler;
 import android.os.IBinder;
-import android.util.DisplayMetrics;
-import android.util.Log;
-import android.view.Gravity;
-import android.view.LayoutInflater;
-import android.view.Surface;
-import android.view.View;
-import android.view.WindowManager;
-import android.widget.TextView;
 
 import androidx.annotation.Nullable;
-import androidx.core.app.NotificationCompat;
-import androidx.core.app.ServiceCompat;
 
-import java.nio.ByteBuffer;
+import com.bastion.inc.OverlayManager;
 
 public class AutoPayScreenCaptureService extends Service {
     private static final String TAG = "MediaProjectionService";

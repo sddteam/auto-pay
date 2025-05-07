@@ -1,4 +1,4 @@
-package com.bastion.inc;
+package com.bastion.inc.OCR;
 
 import android.app.Activity;
 import android.content.Context;
@@ -16,6 +16,10 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.DisplayMetrics;
 import android.util.Log;
+
+import com.bastion.inc.Interfaces.ApplicationStateListener;
+import com.bastion.inc.Interfaces.ProjectionImageListener;
+import com.bastion.inc.OverlayManager;
 
 import java.nio.ByteBuffer;
 

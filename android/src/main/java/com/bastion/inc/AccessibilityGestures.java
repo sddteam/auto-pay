@@ -1,12 +1,15 @@
 package com.bastion.inc;
 
-import android.accessibilityservice.AccessibilityService;
-import android.accessibilityservice.GestureDescription;
 import android.content.Context;
-import android.graphics.Path;
 import android.graphics.Rect;
 import android.util.Log;
 import android.view.accessibility.AccessibilityNodeInfo;
+
+import com.bastion.inc.Enums.ActionState;
+import com.bastion.inc.Enums.NodeInfoAttribute;
+import com.bastion.inc.Interfaces.AppStateDetector;
+import com.bastion.inc.Interfaces.GestureService;
+
 import java.time.LocalDateTime;
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -35,41 +38,35 @@ public class AccessibilityGestures implements GestureService {
         this.overlayManager = OverlayManager.getInstance(context);
     }
     @Override
-    public void click(Location location, int times) {
-        if(location == null){
+    public void click(NodeInfoAttribute attribute, String value) {
+        List<AccessibilityNodeInfo> nodes = new ArrayList<>();
+
+        if(attribute.equals(NodeInfoAttribute.Text)){
+            nodes = getNodeByText(value);
+        } else if (attribute.equals(NodeInfoAttribute.ContentDescription)) {
+            nodes = getNodeByText(value);
+        } else if (attribute.equals(NodeInfoAttribute.DrawingOrder)){
+            int order = Integer.parseInt(value);
+            nodes = getNodeByDrawingOrder(order);
+        }else if (attribute.equals(NodeInfoAttribute.DateTime)){
+            nodes = getNodeByDateTime(value);
+        }
+
+        assert nodes != null;
+
+        if(nodes.isEmpty()){
             return;
         }
-        Path path = new Path();
-        path.moveTo(location.getX(), location.getY());
-        GestureDescription.StrokeDescription strokeDescription = new GestureDescription.StrokeDescription(
-                path,
-                GESTURE_CLICK_DELAY,
-                GESTURE_CLICK_DURATION
-        );
 
-        for (int i = 0; i < times; i++) {
-            performGesture(strokeDescription);
-        }
-       /* OpenCVHandler openCVHandler = OpenCVHandler.getInstance(context.getApplicationContext());
-        Mat screenMat = openCVHandler.takeScreenshot();
-
-        if(screenMat != null){
-            MatchResult matchResult;
-
-            do{
-                matchResult = openCVHandler.findBestMatch(screenMat, 0.1);
-
-                Log.d(TAG, "RECHECK SCREEN - lastScreen " +  state + "currentScreen" + matchResult.templateName);
-
-                if(matchResult.templateName.equals(state)){
-                    waitFor(1000);
-                    screenMat = openCVHandler.takeScreenshot();
+        for (AccessibilityNodeInfo node :
+                nodes) {
+            if(!tryClick(node)){
+                AccessibilityNodeInfo parent = node.getParent();
+                while(parent != null && !tryClick(parent)){
+                    parent = parent.getParent();
                 }
-            }while (!matchResult.templateName.equals(state));
-
-
-        }*/
-
+            }
+        }
 
         waitFor(GESTURE_CLICK_WAIT_TIME);
     }
@@ -146,31 +143,87 @@ public class AccessibilityGestures implements GestureService {
         waitFor(GESTURE_CLICK_WAIT_TIME);
     }
 
-    private Location getLocation(Rect rect){
-        return new Location(rect.centerX(), rect.centerY());
-    }
-
-    @Override
-    public void ads() {
+    private List<AccessibilityNodeInfo> getNodeByDrawingOrder(int drawingOrder){
         AccessibilityNodeInfo rootNodeInfo  = AutoPayAccessibilityService.getInstance().getRootInActiveWindow();
         if(rootNodeInfo == null){
-            return;
+            return null;
         }
 
-        findByText(rootNodeInfo, "Remind me later");
-
         List<AccessibilityNodeInfo> allNodes = new ArrayList<>();
+        List<AccessibilityNodeInfo> foundNodes = new ArrayList<>();
+
         getAllNodesRecursive(rootNodeInfo, allNodes);
 
-        for(AccessibilityNodeInfo node: allNodes){
-            String text = node.getText() != null ? node.getText().toString() : "";
-
-            if(text.contains("Remind me later")){
-                node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+        for (AccessibilityNodeInfo node :
+                allNodes) {
+            if(node.getDrawingOrder() == drawingOrder){
+                foundNodes.add(node);
             }
         }
 
-        waitFor(GESTURE_CLICK_WAIT_TIME);
+        return foundNodes;
+
+    }
+
+    private List<AccessibilityNodeInfo> getNodeByDateTime(String value){
+        AccessibilityNodeInfo rootNodeInfo = AutoPayAccessibilityService.getInstance().getRootInActiveWindow();
+        if(rootNodeInfo == null){
+            return null;
+        }
+
+        List<Map.Entry<LocalDateTime, AccessibilityNodeInfo>> allNodes = new ArrayList<>();
+        getAllDatesRecursive(rootNodeInfo, allNodes);
+
+        if(allNodes.isEmpty()){
+           return getNodeByText(value);
+        }
+
+        return allNodes.stream()
+            .max(Map.Entry.comparingByKey()) // Find the entry with the latest LocalDateTime
+            .map(entry -> List.of(entry.getValue())) // Extract the AccessibilityNodeInfo
+            .orElse(null);
+    }
+
+    private List<AccessibilityNodeInfo> getNodeByText(String text){
+        AccessibilityNodeInfo rootNodeInfo  = AutoPayAccessibilityService.getInstance().getRootInActiveWindow();
+
+        List<AccessibilityNodeInfo> allNodes = new ArrayList<>();
+        List<AccessibilityNodeInfo> foundNodes = new ArrayList<>();
+
+        getAllNodesRecursive(rootNodeInfo, allNodes);
+
+        for (AccessibilityNodeInfo node :
+                allNodes) {
+            String name = node.getText() != null && !node.getText().toString().isEmpty()
+                    ? node.getText().toString()
+                    : (node.getContentDescription() != null ? node.getContentDescription().toString() : "");
+
+            if(name.equals(text)){
+                foundNodes.add(node);
+            }
+        }
+
+        return foundNodes;
+    }
+
+    private List<AccessibilityNodeInfo> getNodeByTitlePane(String text){
+        AccessibilityNodeInfo rootNodeInfo  = AutoPayAccessibilityService.getInstance().getRootInActiveWindow();
+
+        List<AccessibilityNodeInfo> allNodes = new ArrayList<>();
+        List<AccessibilityNodeInfo> foundNodes = new ArrayList<>();
+
+        getAllNodesRecursive(rootNodeInfo, allNodes);
+
+        for (AccessibilityNodeInfo node :
+                allNodes) {
+            String name = node.getPaneTitle() != null ? node.getPaneTitle().toString() : "";
+
+            if(name.equals(text)){
+                foundNodes.add(node);
+            }
+        }
+
+        return foundNodes;
     }
 
     @Override
@@ -213,136 +266,18 @@ public class AccessibilityGestures implements GestureService {
       return node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
     }
 
-
-  private void findByText(AccessibilityNodeInfo rootNodeInfo, String text){
-        List<AccessibilityNodeInfo> fileNodes = rootNodeInfo.findAccessibilityNodeInfosByText(text);
-        if(fileNodes == null || fileNodes.isEmpty()){
-            return;
-        }
-
-        for(AccessibilityNodeInfo fileNode : fileNodes){
-            String contentDescription = fileNode.getContentDescription() != null ? fileNode.getContentDescription().toString() : "";
-            boolean isPreviewButton = contentDescription.contains("Preview the file");
-
-            if(!isPreviewButton){
-                boolean clickResult = fileNode.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-                if (clickResult) {
-                    Log.i("Accessibility", "Node clicked successfully.");
-                } else {
-                    Log.e("Accessibility", "Failed to click the node.");
-                }
-            }
-        }
-    }
-
-    private List<AccessibilityNodeInfo> getNodeByText(String text){
-        AccessibilityNodeInfo rootNodeInfo  = AutoPayAccessibilityService.getInstance().getRootInActiveWindow();
-
-        List<AccessibilityNodeInfo> allNodes = new ArrayList<>();
-        List<AccessibilityNodeInfo> foundNodes = new ArrayList<>();
-
-        getAllNodesRecursive(rootNodeInfo, allNodes);
-
-        for (AccessibilityNodeInfo node :
-                allNodes) {
-            String name = node.getText() != null ? node.getText().toString() : "";
-
-            if(name.equals(text)){
-                foundNodes.add(node);
-            }
-        }
-
-        return foundNodes;
-    }
-
     @Override
     public void close() throws Exception {
 
     }
 
-    public ActionState checkState(){
-        AccessibilityNodeInfo rootNodeInfo  = AutoPayAccessibilityService.getInstance().getRootInActiveWindow();
-        if(rootNodeInfo == null){
-            return ActionState.UNKNOWN;
-        }
+    public void checkState(String appName){
+        AccessibilityNodeInfo rootNodeInfo = AutoPayAccessibilityService.getInstance().getRootInActiveWindow();
+        AppStateDetector detector = AppStateDetectorFactory.getDetector(appName, context);
 
-        List<AccessibilityNodeInfo> allNodes = new ArrayList<>();
-        getAllNodesRecursive(rootNodeInfo, allNodes);
-
-        //drawBoundingBox(allNodes);
-
-        List<AccessibilityNodeInfo> loginNode = rootNodeInfo.findAccessibilityNodeInfosByText("Enter your MPIN");
-        List<AccessibilityNodeInfo> homeNode = rootNodeInfo.findAccessibilityNodeInfosByText("Bills");
-        List<AccessibilityNodeInfo> uploadNode = rootNodeInfo.findAccessibilityNodeInfosByText("Upload QR");
-        List<AccessibilityNodeInfo> selectNode = getNodeByText("Photos");
-        List<AccessibilityNodeInfo> paymentNode = getNodeByText("Amount Due");
-        List<AccessibilityNodeInfo> adsNode = getNodeByText("Remind me later");
-        List<AccessibilityNodeInfo> errorNode = getNodeByText("Please make sure code is clear.");
-
-        if(!loginNode.isEmpty()){
-            return ActionState.LOGIN;
-        } else if (!homeNode.isEmpty()) {
-            return ActionState.HOME;
-        } else if (!uploadNode.isEmpty()) {
-            return ActionState.UPLOAD_QR;
-        } else if (!selectNode.isEmpty()) {
-            return ActionState.SELECT_QR;
-        } else if (!paymentNode.isEmpty()) {
-            return ActionState.PAYMENT;
-        } else if (!adsNode.isEmpty()) {
-            return ActionState.ADS;
-        } else if (!errorNode.isEmpty()) {
-          return ActionState.ERROR;
-        } else {
-            return ActionState.UNKNOWN;
-        }
-
-       /* if(allNodes.size() >= 60){
-            return ActionState.HOME;
-        } else if (allNodes.size() == 31) {
-            return ActionState.SELECT_QR;
-        } else if (allNodes.size() == 28) {
-            return ActionState.LOGIN;
-        } else if (allNodes.size() >= 17) {
-            return ActionState.UPLOAD_QR;
-        }else{
-            return ActionState.UNKNOWN;
-        }*/
+        ActionState state  = detector.detectState(rootNodeInfo);
+        detector.handleState(state);
     }
-
-    public ActionState mayaState(){
-      AccessibilityNodeInfo rootNodeInfo  = AutoPayAccessibilityService.getInstance().getRootInActiveWindow();
-      if(rootNodeInfo == null){
-        return ActionState.UNKNOWN;
-      }
-
-      List<AccessibilityNodeInfo> allNodes = new ArrayList<>();
-      getAllNodesRecursive(rootNodeInfo, allNodes);
-
-      //drawBoundingBox(allNodes);
-
-      List<AccessibilityNodeInfo> homeNode = getNodeByText("Wallet");
-      List<AccessibilityNodeInfo> servicesNode = getNodeByText("Services");
-      List<AccessibilityNodeInfo> uploadNode = getNodeByText("Scan a QR code");
-      List<AccessibilityNodeInfo> selectNode = getNodeByText("Photos");
-      List<AccessibilityNodeInfo> paymentNode = getNodeByText("My Wallet");
-
-      if (!homeNode.isEmpty()) {
-        return ActionState.HOME;
-      } else if (!servicesNode.isEmpty()) {
-        return ActionState.SERVICES;
-      } else if (!uploadNode.isEmpty()) {
-        return ActionState.UPLOAD_QR;
-      } else if (!selectNode.isEmpty()) {
-        return ActionState.SELECT_QR;
-      } else if (!paymentNode.isEmpty()) {
-        return ActionState.PAYMENT;
-      } else {
-        return ActionState.UNKNOWN;
-      }
-
-    }
-
     private void drawBoundingBox(List<AccessibilityNodeInfo> nodes){
         List<Rect> boundsList = new ArrayList<>();
         int statusBarHeight = getStatusBarHeight(context);
@@ -462,23 +397,24 @@ public class AccessibilityGestures implements GestureService {
         return LocalDateTime.of(year, monthNumber, day, hour, minute);
     }
 
-    private void performGesture(GestureDescription.StrokeDescription strokeDescription){
-        GestureDescription.Builder gestureBuilder = new GestureDescription.Builder();
-        gestureBuilder.addStroke(strokeDescription);
+    private void findByText(AccessibilityNodeInfo rootNodeInfo, String text){
+        List<AccessibilityNodeInfo> fileNodes = rootNodeInfo.findAccessibilityNodeInfosByText(text);
+        if(fileNodes == null || fileNodes.isEmpty()){
+            return;
+        }
 
-        AccessibilityService.GestureResultCallback callback = new AccessibilityService.GestureResultCallback() {
-            @Override
-            public void onCompleted(GestureDescription gestureDescription) {
-                super.onCompleted(gestureDescription);
+        for(AccessibilityNodeInfo fileNode : fileNodes){
+            String contentDescription = fileNode.getContentDescription() != null ? fileNode.getContentDescription().toString() : "";
+            boolean isPreviewButton = contentDescription.contains("Preview the file");
+
+            if(!isPreviewButton){
+                boolean clickResult = fileNode.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                if (clickResult) {
+                    Log.i("Accessibility", "Node clicked successfully.");
+                } else {
+                    Log.e("Accessibility", "Failed to click the node.");
+                }
             }
-
-            @Override
-            public void onCancelled(GestureDescription gestureDescription) {
-                super.onCancelled(gestureDescription);
-            }
-        };
-
-        AutoPayAccessibilityService.getInstance().dispatchGesture(gestureBuilder.build(), callback, null);
-
+        }
     }
 }

@@ -1,4 +1,4 @@
-package com.bastion.inc;
+package com.bastion.inc.Interfaces;
 
 public interface GestureListener {
     void onGestureCompleted();
