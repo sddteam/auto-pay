@@ -6,70 +6,6 @@
     "tags": [],
     "methods": [
       {
-        "name": "echo",
-        "signature": "(options: { value: string; }) => Promise<{ value: string; }>",
-        "parameters": [
-          {
-            "name": "options",
-            "docs": "",
-            "type": "{ value: string; }"
-          }
-        ],
-        "returns": "Promise<{ value: string; }>",
-        "tags": [],
-        "docs": "",
-        "complexTypes": [],
-        "slug": "echo"
-      },
-      {
-        "name": "performGesture",
-        "signature": "(options: { x: number; y: number; }) => Promise<any>",
-        "parameters": [
-          {
-            "name": "options",
-            "docs": "",
-            "type": "{ x: number; y: number; }"
-          }
-        ],
-        "returns": "Promise<any>",
-        "tags": [],
-        "docs": "",
-        "complexTypes": [],
-        "slug": "performgesture"
-      },
-      {
-        "name": "navigateGCash",
-        "signature": "(options: any) => Promise<any>",
-        "parameters": [
-          {
-            "name": "options",
-            "docs": "",
-            "type": "any"
-          }
-        ],
-        "returns": "Promise<any>",
-        "tags": [],
-        "docs": "",
-        "complexTypes": [],
-        "slug": "navigategcash"
-      },
-      {
-        "name": "stopNavigation",
-        "signature": "(options: any) => Promise<any>",
-        "parameters": [
-          {
-            "name": "options",
-            "docs": "",
-            "type": "any"
-          }
-        ],
-        "returns": "Promise<any>",
-        "tags": [],
-        "docs": "",
-        "complexTypes": [],
-        "slug": "stopnavigation"
-      },
-      {
         "name": "checkAccessibility",
         "signature": "() => Promise<any>",
         "parameters": [],
@@ -167,18 +103,20 @@
       },
       {
         "name": "startAutoPay",
-        "signature": "(options: any) => Promise<any>",
+        "signature": "(options: PayMateOptions) => Promise<any>",
         "parameters": [
           {
             "name": "options",
             "docs": "",
-            "type": "any"
+            "type": "PayMateOptions"
           }
         ],
         "returns": "Promise<any>",
         "tags": [],
         "docs": "",
-        "complexTypes": [],
+        "complexTypes": [
+          "PayMateOptions"
+        ],
         "slug": "startautopay"
       }
     ],
@@ -198,6 +136,29 @@
           "docs": "",
           "complexTypes": [],
           "type": "() => Promise<void>"
+        }
+      ]
+    },
+    {
+      "name": "PayMateOptions",
+      "slug": "paymateoptions",
+      "docs": "",
+      "tags": [],
+      "methods": [],
+      "properties": [
+        {
+          "name": "app",
+          "tags": [],
+          "docs": "",
+          "complexTypes": [],
+          "type": "string"
+        },
+        {
+          "name": "base64",
+          "tags": [],
+          "docs": "",
+          "complexTypes": [],
+          "type": "string"
         }
       ]
     }

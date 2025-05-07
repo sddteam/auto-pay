@@ -2,6 +2,14 @@
 
 var core = require('@capacitor/core');
 
+exports.SupportedApps = void 0;
+(function (SupportedApps) {
+    SupportedApps["GCASH"] = "GCASH";
+    SupportedApps["MAYA"] = "MAYA";
+    SupportedApps["METROBANK"] = "METROBANK";
+    SupportedApps["BDO"] = "BDO";
+})(exports.SupportedApps || (exports.SupportedApps = {}));
+
 const AutoPay = core.registerPlugin('AutoPay', {
     web: () => Promise.resolve().then(function () { return web; }).then((m) => new m.AutoPayWeb()),
 });
@@ -59,28 +67,8 @@ class AutoPayWeb extends core.WebPlugin {
             }
         });
     }
-    stopNavigation(options) {
-        return options;
-    }
-    performGesture(options) {
-        return new Promise((resolve, reject) => {
-            try {
-                resolve(options);
-            }
-            catch (error) {
-                reject(error);
-            }
-        });
-    }
     startAutoPay(options) {
-        return options;
-    }
-    navigateGCash(options) {
-        return options;
-    }
-    async echo(options) {
-        console.log('ECHO', options);
-        return options;
+        return Promise.resolve(options);
     }
 }
 

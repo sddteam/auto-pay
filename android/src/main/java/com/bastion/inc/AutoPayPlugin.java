@@ -1,5 +1,6 @@
 package com.bastion.inc;
 
+import com.bastion.inc.Enums.SupportedApp;
 import com.bastion.inc.Interfaces.ApplicationStateListener;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -38,10 +39,8 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
     private Bridge bridge;
     private String ENABLE_ACCESSIBILITY_CBID;
     private String ENABLE_OVERLAY_CIBD;
-    private String NAVIGATE_GCASH_CIBD;
-    private ActivityResultLauncher<Intent> screenCaptureLauncher;
 
-    private AutoPay implementation = new AutoPay();
+    private final AutoPay implementation = new AutoPay();
 
     @Override
     public void load(){
@@ -51,39 +50,29 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
     }
 
     @PluginMethod
-    public void echo(PluginCall call) {
-        String value = call.getString("value");
-
-        JSObject ret = new JSObject();
-        ret.put("value", implementation.echo(value));
-        call.resolve(ret);
-    }
-    @PluginMethod
     public void startAutoPay(PluginCall call){
         String gateway = call.getString("url");
-        String url = "";
-        if(Objects.equals(gateway, "GCash")){
-          url = "com.globe.gcash.android";
-        }else{
-          url = "com.paymaya";
-        }
         String base64 = call.getString("base64");
-        JSObject ret = new JSObject();
 
-        String filename = generateQRFilename();
+        assert gateway != null;
+        SupportedApp app = SupportedApp.valueOf(gateway.toUpperCase());
+        String url = GatewayUrlProvider.getUrl(app);
+
+        JSObject ret = new JSObject();
+        String filename = implementation.generateQRFilename();
 
         try {
             Context context = getContext();
-            if(!saveImage(base64, Environment.DIRECTORY_PICTURES, filename)) {
+            if(!implementation.saveImage(base64, Environment.DIRECTORY_PICTURES, filename, context)) {
                 throw new AutoPayException(AutoPayErrorCodes.FAILED_TO_SAVE_QR_CODE_ERROR);
-            }else if(!openApp(url)){
+            }else if(!implementation.openApp(url, context, getActivity())){
                 throw new AutoPayException(AutoPayErrorCodes.GCASH_APP_NOT_INSTALLED_ERROR);
-            }else if(!isAccessibilityServiceEnabled(context)){
+            }else if(!implementation.isAccessibilityServiceEnabled(context)){
                 throw new AutoPayException(AutoPayErrorCodes.ACCESSIBILITY_SERVICE_NOT_ENABLED_ERROR);
             } else if (!Settings.canDrawOverlays(context)) {
                 throw new AutoPayException(AutoPayErrorCodes.OVERLAY_PERMISSION_NOT_ENABLED_ERROR);
             }else{
-                IntervalTaskHandler.getInstance(context).startIntervalTask(gateway, 1000);
+                IntervalTaskHandler.getInstance(context).startIntervalTask(app, 1000);
 
                 ret.put("value", true);
                 call.resolve(ret);
@@ -94,54 +83,19 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
             call.reject(e.getLocalizedMessage(), null, e);
         }
     }
-    @PluginMethod
-    public void stopNavigation(PluginCall call){
-        JSObject ret = new JSObject();
-        ret.put("value", "success");
-        call.resolve(ret);
-    }
-    @PluginMethod
-    public void performGesture(PluginCall call){
-        float coordX = call.getFloat("x");
-        float coordY = call.getFloat("y");
 
-
-        JSObject ret = new JSObject();
-        ret.put("value", coordX);
-        call.resolve(ret);
-    }
-    @PluginMethod()
-    public void navigateGCash(PluginCall call){
-        try {
-            Context context = getContext();
-
-            if(!isAccessibilityServiceEnabled(context)){
-                throw new AutoPayException(AutoPayErrorCodes.ACCESSIBILITY_SERVICE_NOT_ENABLED_ERROR);
-            } else if (!Settings.canDrawOverlays(context)) {
-                throw new AutoPayException(AutoPayErrorCodes.OVERLAY_PERMISSION_NOT_ENABLED_ERROR);
-            }else{
-
-                JSObject ret = new JSObject();
-                ret.put("value", true);
-                call.resolve(ret);
-            }
-        }catch (AutoPayException e){
-            call.reject(e.getLocalizedMessage(), e.getErrorCode());
-        }catch (Exception e){
-            call.reject(e.getLocalizedMessage(), null, e);
-        }
-    }
     @PluginMethod()
     public void checkAccessibility(PluginCall call){
         JSObject ret = new JSObject();
         try{
-            ret.put("value", isAccessibilityServiceEnabled(getContext()));
+            ret.put("value", implementation.isAccessibilityServiceEnabled(getContext()));
             call.resolve(ret);
         }catch (Exception e){
             call.reject(e.getLocalizedMessage(), null, e);
         }
 
     }
+
     @PluginMethod()
     public void enableAccessibility(PluginCall call){
         try{
@@ -198,7 +152,7 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
             if(accessibilityCall != null){
                 try{
                     JSObject ret = new JSObject();
-                    ret.put("value", isAccessibilityServiceEnabled(getContext()));
+                    ret.put("value", implementation.isAccessibilityServiceEnabled(getContext()));
                     accessibilityCall.resolve(ret);
                 }catch (Exception e){
                     accessibilityCall.reject(e.getLocalizedMessage(), null, e);
@@ -228,17 +182,6 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
         IntervalTaskHandler.getInstance(getContext().getApplicationContext()).stopIntervalTask();
     }
 
-    private boolean isAccessibilityServiceEnabled(Context context){
-        AccessibilityManager am = (AccessibilityManager) context.getSystemService(Context.ACCESSIBILITY_SERVICE);
-        if(am != null){
-            String enabledServices = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
-            String serviceName = context.getPackageName() + "/" + AutoPayAccessibilityService.class.getName();
-            return enabledServices != null && enabledServices.contains(serviceName);
-        }
-
-        return false;
-    }
-
     @Override
     public void onCompleted() {
         Log.d(TAG, "STOP NAVIGATION");
@@ -261,116 +204,7 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
         notifyListeners("error", ret);
     }
 
-    private boolean canOpenApp(String packageName){
-        Context ctx = getContext().getApplicationContext();
-        final PackageManager pm = ctx.getPackageManager();
 
-        try{
-            pm.getPackageInfo(packageName, PackageManager.GET_ACTIVITIES);
-            return true;
-        }catch (Exception e){
-            e.printStackTrace();
-            return false;
-        }
-    }
 
-    private boolean openApp(String packageName){
-        if(!canOpenApp(packageName)){
-            return false;
-        }
 
-        final PackageManager manager = getContext().getPackageManager();
-        Intent launchIntent = new Intent(Intent.ACTION_VIEW);
-        launchIntent.setData(Uri.parse(packageName));
-        launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-
-        try{
-            getActivity().startActivity(launchIntent);
-            return true;
-        }catch (Exception e){
-            e.printStackTrace();
-            launchIntent = manager.getLaunchIntentForPackage(packageName);
-            try{
-                getActivity().startActivity(launchIntent);
-                return true;
-            }catch (Exception epgk){
-              epgk.printStackTrace();
-              return false;
-            }
-        }
-    }
-
-    private boolean saveImage(String base64, String filepath, String filename) {
-        try {
-            byte[] imageBytes = Base64.decode(base64, Base64.DEFAULT);
-            ContentResolver resolver = getContext().getContentResolver();
-            Uri imageUri = null;
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) { // Android 10+
-                // Check if file already exists in MediaStore
-                Uri existingFileUri = findExistingImageUri(resolver, filename);
-                if (existingFileUri != null) {
-                    resolver.delete(existingFileUri, null, null); // Delete old file
-                    Log.d(TAG, "Existing file deleted: " + filename);
-                }
-
-                // Insert new file
-                ContentValues values = new ContentValues();
-                values.put(MediaStore.MediaColumns.DISPLAY_NAME, filename);
-                values.put(MediaStore.MediaColumns.MIME_TYPE, "image/png");
-                values.put(MediaStore.MediaColumns.RELATIVE_PATH, filepath);
-
-                imageUri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
-            } else { // Android 9 and below
-                File imageFile = new File(Environment.getExternalStoragePublicDirectory(filepath), filename);
-                if (imageFile.exists()) {
-                    boolean deleted = imageFile.delete(); // Delete existing file
-                    if (deleted) {
-                        Log.d(TAG, "Existing file deleted: " + imageFile.getAbsolutePath());
-                    }
-                }
-                imageUri = Uri.fromFile(imageFile);
-            }
-
-            // Save the image
-            if (imageUri != null) {
-                try (OutputStream outputStream = resolver.openOutputStream(imageUri)) {
-                    if (outputStream != null) {
-                        outputStream.write(imageBytes);
-                        outputStream.flush();
-                        Log.d(TAG, "Image saved successfully at: " + filepath);
-                        return true;
-                    } else {
-                        return false;
-                    }
-                }
-            } else {
-                Log.e(TAG, "Error saving image: " + filename);
-                return false;
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to save image: " + e.getLocalizedMessage());
-            return false;
-        }
-    }
-
-    private String generateQRFilename(){
-        String currentDate = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
-        return "qr_code_" + currentDate + ".png";
-    }
-
-    private Uri findExistingImageUri(ContentResolver resolver, String filename) {
-        Uri collection = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
-        String[] projection = {MediaStore.Images.Media._ID};
-        String selection = MediaStore.Images.Media.DISPLAY_NAME + "=?";
-        String[] selectionArgs = {filename};
-
-        try (Cursor cursor = resolver.query(collection, projection, selection, selectionArgs, null)) {
-            if (cursor != null && cursor.moveToFirst()) {
-                long id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID));
-                return Uri.withAppendedPath(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, String.valueOf(id));
-            }
-        }
-        return null; // File does not exist
-    }
 }
