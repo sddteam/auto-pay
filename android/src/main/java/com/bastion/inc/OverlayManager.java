@@ -69,7 +69,7 @@ public class OverlayManager {
                 whiteOverlayView = inflater.inflate(R.layout.white_overlay, null);
 
                 ImageView overlayOmnibusinessLogo = whiteOverlayView.findViewById(R.id.overlay_omnibusiness_logo);
-                overlayOmnibusinessLogo.setImageBitmap(getImage("OPI-Logo-AutoPay.jpg"));
+                overlayOmnibusinessLogo.setImageBitmap(getImage("OPI-PayMate-Squ.png"));
 
                 WindowManager.LayoutParams params = new WindowManager.LayoutParams(
                         WindowManager.LayoutParams.MATCH_PARENT,

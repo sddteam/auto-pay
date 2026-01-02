@@ -22,4 +22,7 @@ export interface AutoPayPlugin {
     }) => void): Promise<PluginListenerHandle>;
     removeAllListeners(): Promise<void>;
     startAutoPay(options: PayMateOptions): Promise<any>;
+    toast(data: {
+        message: string;
+    }): Promise<any>;
 }

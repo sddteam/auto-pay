@@ -6,4 +6,7 @@ export declare class AutoPayWeb extends WebPlugin implements AutoPayPlugin {
     checkAccessibility(): Promise<any>;
     enableAccessibility(): Promise<any>;
     startAutoPay(options: PayMateOptions): Promise<any>;
+    toast(data: {
+        message: string;
+    }): Promise<any>;
 }

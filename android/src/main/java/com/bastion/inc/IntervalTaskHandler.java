@@ -6,6 +6,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.view.accessibility.AccessibilityNodeInfo;
+import android.widget.Toast;
 
 import com.bastion.inc.Enums.ActionState;
 import com.bastion.inc.Enums.SupportedApp;
@@ -61,6 +62,7 @@ public class IntervalTaskHandler {
                   if(timeOutCount >= MAX_TIMEOUT_COUNT){
                       stopIntervalTask();
                       overlayManager.removeWhiteOverlay();
+                      Toast.makeText(context, "Time out!", Toast.LENGTH_SHORT).show();
                       return;
                   }
               }else{

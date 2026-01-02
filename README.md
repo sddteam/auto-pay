@@ -21,6 +21,7 @@ npx cap sync
 * [`addListener('error', ...)`](#addlistenererror-)
 * [`removeAllListeners()`](#removealllisteners)
 * [`startAutoPay(...)`](#startautopay)
+* [`toast(...)`](#toast)
 * [Interfaces](#interfaces)
 
 </docgen-index>
@@ -122,6 +123,21 @@ startAutoPay(options: PayMateOptions) => Promise<any>
 | Param         | Type                                                      |
 | ------------- | --------------------------------------------------------- |
 | **`options`** | <code><a href="#paymateoptions">PayMateOptions</a></code> |
+
+**Returns:** <code>Promise&lt;any&gt;</code>
+
+--------------------
+
+
+### toast(...)
+
+```typescript
+toast(data: { message: string; }) => Promise<any>
+```
+
+| Param      | Type                              |
+| ---------- | --------------------------------- |
+| **`data`** | <code>{ message: string; }</code> |
 
 **Returns:** <code>Promise&lt;any&gt;</code>
 

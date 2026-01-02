@@ -55,5 +55,16 @@ export class AutoPayWeb extends WebPlugin {
     startAutoPay(options) {
         return Promise.resolve(options);
     }
+    toast(data) {
+        return new Promise((resolve, reject) => {
+            try {
+                alert(data.message);
+                resolve(true);
+            }
+            catch (error) {
+                reject(false);
+            }
+        });
+    }
 }
 //# sourceMappingURL=web.js.map

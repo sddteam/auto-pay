@@ -37,7 +37,7 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
 
     @PluginMethod
     public void startAutoPay(PluginCall call){
-        String gateway = call.getString("url");
+        String gateway = call.getString("app");
         String base64 = call.getString("base64");
 
         assert gateway != null;
@@ -127,6 +127,14 @@ public class AutoPayPlugin extends Plugin implements ApplicationStateListener {
         }
     }
 
+    @PluginMethod()
+    public void toast(PluginCall call){
+        String message = call.getString("message");
+
+        Toast.makeText(getContext(), message, Toast.LENGTH_LONG).show();
+
+        call.resolve();
+    }
     @Override
     protected void handleOnResume(){
         super.handleOnResume();

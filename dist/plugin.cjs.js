@@ -70,6 +70,17 @@ class AutoPayWeb extends core.WebPlugin {
     startAutoPay(options) {
         return Promise.resolve(options);
     }
+    toast(data) {
+        return new Promise((resolve, reject) => {
+            try {
+                alert(data.message);
+                resolve(true);
+            }
+            catch (error) {
+                reject(false);
+            }
+        });
+    }
 }
 
 var web = /*#__PURE__*/Object.freeze({

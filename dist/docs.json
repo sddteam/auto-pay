@@ -118,6 +118,22 @@
           "PayMateOptions"
         ],
         "slug": "startautopay"
+      },
+      {
+        "name": "toast",
+        "signature": "(data: { message: string; }) => Promise<any>",
+        "parameters": [
+          {
+            "name": "data",
+            "docs": "",
+            "type": "{ message: string; }"
+          }
+        ],
+        "returns": "Promise<any>",
+        "tags": [],
+        "docs": "",
+        "complexTypes": [],
+        "slug": "toast"
       }
     ],
     "properties": []

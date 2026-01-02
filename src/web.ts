@@ -54,4 +54,16 @@ export class AutoPayWeb extends WebPlugin implements AutoPayPlugin {
   startAutoPay(options: PayMateOptions): Promise<any>{
     return Promise.resolve(options);
   }
+  toast(data: {
+    message: string;
+  }): Promise<any> {
+    return new Promise((resolve, reject) => {
+      try{
+        alert(data.message);
+        resolve(true);
+      }catch(error){
+        reject(false);
+      }
+    });
+  }
 }

@@ -26,5 +26,7 @@ export interface AutoPayPlugin {
   ): Promise<PluginListenerHandle>;
   removeAllListeners(): Promise<void>;
   startAutoPay(options: PayMateOptions): Promise<any>;
-  
+  toast(data: {
+    message: string;
+  }): Promise<any>;
 }
